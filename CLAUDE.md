@@ -22,7 +22,7 @@ These exist so that anything working locally works identically once deployed. Do
 
 **Never hardcode `localhost`.** Use `process.env.NEXT_PUBLIC_APP_URL` for anything building a URL — payment links, follow-up links, redirects. Hardcoding localhost means every link mailed to a patient points at a machine they can't reach.
 
-**No `.env` files.** Environment variables live only in Netlify. Test locally with `netlify dev`, which fetches them at runtime. Never create `.env.local`, never ask for key values, never print them.
+**Environment variables.** A `.env.local` exists in the project root holding real credentials. Never print it, echo it, commit it, or modify it. Read values only through `process.env`, always lazily inside functions — never at module scope, or the build breaks wherever a variable isn't set. Test locally with `npm run dev`.
 
 **No long-running processes.** No background workers, no polling loops, no websocket servers, no in-memory caches that assume a persistent process. Serverless functions start cold and die. Scheduled work goes in `netlify/functions/` as a Netlify Scheduled Function — not in `app/api/`, which is deprecated for this on Netlify's Next.js runtime v5.
 
@@ -51,7 +51,7 @@ Write migrations as SQL files in `supabase/migrations/`, numbered in order. They
 Work through one phase at a time. Within a phase:
 
 1. Write the code
-2. Test it with `netlify dev`
+2. Test it with `npm run dev`
 3. Run `npm run build` and fix anything it surfaces
 4. Stop, report that the phase is done, and give a one-line commit message
 
