@@ -4,7 +4,7 @@
 
 [build.environment]
   # These are public by design (shipped to the browser); stop the secrets scanner flagging them.
-  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_APP_URL"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
