@@ -15,7 +15,7 @@ export async function ensureConsultDay(
     "default_call_start",
     "default_call_end",
     "default_capacity",
-  ] as const);
+  ] as const, supabase);
 
   const { error } = await supabase.from("consult_days").upsert(
     {

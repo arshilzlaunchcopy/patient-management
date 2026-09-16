@@ -8,6 +8,8 @@ import {
   bigInputClass,
   bigLabelClass,
   Notice,
+  PageTitle,
+  Steps,
 } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
@@ -58,8 +60,8 @@ export default async function ProofPage({
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.proofHeading}</h1>
-      <p className="mt-1 text-base text-neutral-600">{bn.proofHelp}</p>
+      <Steps current={3} />
+      <PageTitle help={bn.proofHelp}>{bn.proofHeading}</PageTitle>
 
       <form action="/api/book/claim" method="post" className="mt-6 space-y-5">
         <input type="hidden" name="token" value={token} />

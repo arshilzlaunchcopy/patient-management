@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const settings = await getSettings(["booking_open", "hold_minutes", "video_fee"] as const);
+    const settings = await getSettings(["booking_open", "hold_minutes", "video_fee"] as const, supabase);
     if (settings.booking_open === "false") return back("closed");
 
     await sweepExpiredHolds(supabase, date);

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/dates";
 import { displayBD } from "@/lib/phone";
-import { listSmsLog, OUTBOX_LIMIT } from "@/lib/sms/queries";
+import { countQueued, listSmsLog, OUTBOX_LIMIT } from "@/lib/sms/queries";
+import { smsGatewayConfigured } from "@/lib/sms/provider";
+import { SendQueued } from "@/components/outbox/send-queued";
 import { Linkified } from "@/components/outbox/linkified";
 import { cardClass } from "@/components/ui/styles";
 
@@ -20,17 +22,20 @@ export default async function OutboxPage({
   searchParams: Promise<{ campaign?: string }>;
 }) {
   const { campaign } = await searchParams;
-  const rows = await listSmsLog(campaign);
+  const [rows, queued] = await Promise.all([listSmsLog(campaign), countQueued()]);
+  const configured = smsGatewayConfigured();
 
   return (
     <>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-neutral-900">Outbox</h1>
         <p className="mt-1 text-base text-neutral-600">
-          Every SMS the system has generated, newest first. No gateway is connected
-          yet, so messages stay queued. Links inside a message can be opened here to
-          walk through the patient flow.
+          Every SMS the system has generated, newest first.
+          {configured
+            ? " Messages go out through sms.net.bd as they are created."
+            : " Until an SMS gateway key is added, messages stay queued here; links inside them can still be opened to walk through the patient flow."}
         </p>
+        <SendQueued configured={configured} queued={queued} />
         {campaign ? (
           <p className="mt-2 text-sm text-neutral-600">
             Showing one bulk send only.{" "}

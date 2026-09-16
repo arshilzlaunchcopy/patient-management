@@ -3,6 +3,8 @@ import { getSettings, SETTING_KEYS, type SettingKey } from "@/lib/settings";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ResetDemo } from "@/components/settings/reset-demo";
+import { TemplatesForm } from "@/components/settings/templates-form";
+import { isCustomTemplate, listTemplates } from "@/lib/messages/queries";
 import { ShareLinks } from "@/components/dashboard/share-links";
 import { displayBD } from "@/lib/phone";
 
@@ -27,7 +29,10 @@ const DEFAULTS: Record<SettingKey, string> = {
 };
 
 export default async function SettingsPage() {
-  const stored = await getSettings(SETTING_KEYS);
+  const [stored, allTemplates] = await Promise.all([getSettings(SETTING_KEYS), listTemplates()]);
+  const templates = allTemplates
+    .filter((t) => !isCustomTemplate(t.key))
+    .map((t) => ({ id: t.id, key: t.key, label: t.label_en, body: t.body_bn, variables: t.variables }));
   const values = { ...DEFAULTS };
   for (const k of SETTING_KEYS) {
     if (stored[k] !== null && stored[k] !== undefined) values[k] = stored[k]!;
@@ -46,6 +51,7 @@ export default async function SettingsPage() {
       <div className="space-y-6">
         <ShareLinks />
         <SettingsForm values={values} />
+        <TemplatesForm templates={templates} />
         <ResetDemo />
       </div>
     </>

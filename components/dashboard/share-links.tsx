@@ -24,7 +24,7 @@ function safeUrl(path: string): string {
 }
 
 const smallButton =
-  "inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50";
+  "inline-flex min-h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50";
 
 /**
  * The two public URLs the doctor hands out, with one-tap copy, open, and

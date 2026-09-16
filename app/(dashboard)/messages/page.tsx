@@ -9,13 +9,14 @@ import {
   SEGMENTS,
   segmentQuery,
 } from "@/lib/messages/segments";
-import { listCampaigns } from "@/lib/messages/queries";
+import { isCustomTemplate, listCampaigns, listTemplates } from "@/lib/messages/queries";
 import { getSettings, settingNumber } from "@/lib/settings";
 import { formatDateTime } from "@/lib/dates";
 import { displayBD } from "@/lib/phone";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AudiencePicker } from "@/components/messages/audience-picker";
 import { ComposeForm } from "@/components/messages/compose-form";
+import { CustomAudience } from "@/components/messages/custom-audience";
 import { cardClass } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Messages" };
@@ -25,17 +26,29 @@ const PREVIEW_ROWS = 40;
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ segment?: string; date?: string; type?: string; patient?: string }>;
+  searchParams: Promise<{
+    segment?: string;
+    date?: string;
+    type?: string;
+    patient?: string;
+    text?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const filter = parseSegment(sp);
   const supabase = await createUserClient();
 
-  const [recipients, settings, campaigns] = await Promise.all([
+  const [recipients, settings, campaigns, allTemplates] = await Promise.all([
     resolveRecipients(supabase, filter),
     getSettings(["sms_price_per_segment"] as const),
     listCampaigns(),
+    listTemplates(),
   ]);
+  // Automatic templates carry {{placeholders}} the bulk sender cannot fill; only plain texts are offered.
+  const templates = allTemplates
+    .filter((t) => t.is_active && t.variables.length === 0)
+    .map((t) => ({ id: t.id, name: t.label_en, body: t.body_bn, custom: isCustomTemplate(t.key) }));
+  const initialBody = (sp.text ?? "").slice(0, 1000);
   const price = settingNumber(settings.sms_price_per_segment, 0.3);
   const audienceLabel = describeSegment(
     filter,
@@ -52,6 +65,16 @@ export default async function MessagesPage({
   if (filter.type) hidden.type = filter.type;
   if (filter.patient) hidden.patient = filter.patient;
 
+  const picker = (
+    <AudiencePicker
+      options={options}
+      segment={filter.segment}
+      date={filter.date ?? ""}
+      type={filter.type ?? ""}
+      help={SEGMENTS[filter.segment].help}
+    />
+  );
+
   return (
     <>
       <PageHeader
@@ -59,18 +82,20 @@ export default async function MessagesPage({
         description="Pick who should get it, write it in Bangla, check the cost, send. Every message lands in the Outbox."
       />
 
+      {filter.segment === "custom" ? (
+        <CustomAudience
+          picker={picker}
+          pricePerSegment={price}
+          templates={templates}
+          initialBody={initialBody}
+        />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
         <section className={`${cardClass} p-5`} aria-labelledby="audience-heading">
           <h2 id="audience-heading" className="mb-4 text-base font-semibold text-neutral-900">
             Audience
           </h2>
-          <AudiencePicker
-            options={options}
-            segment={filter.segment}
-            date={filter.date ?? ""}
-            type={filter.type ?? ""}
-            help={SEGMENTS[filter.segment].help}
-          />
+          {picker}
 
           <h3 className="mt-6 flex items-baseline gap-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Recipients
@@ -115,14 +140,17 @@ export default async function MessagesPage({
             Message to {audienceLabel.toLowerCase()}
           </h2>
           <ComposeForm
-            key={segmentQuery(filter)}
+            key={segmentQuery(filter) + initialBody}
             hidden={hidden}
             recipientCount={recipients.length}
             audienceLabel={audienceLabel}
             pricePerSegment={price}
+            templates={templates}
+            initialBody={initialBody}
           />
         </section>
       </div>
+      )}
 
       <section className="mt-10" aria-labelledby="history-heading">
         <h2 id="history-heading" className="mb-3 text-lg font-semibold text-neutral-900">

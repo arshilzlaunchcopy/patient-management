@@ -1,15 +1,21 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createUserClient } from "@/lib/supabase/server";
 
 /**
  * Read a set of keys from the settings table. Missing keys come back null;
  * callers supply their own fallbacks so a half-seeded table never crashes
  * a page.
+ *
+ * Row-level security only lets the signed-in doctor read settings. Patient
+ * pages and public route handlers have no session, so they must pass the
+ * service client; with the default client they would silently get nothing.
  */
 export async function getSettings<K extends string>(
   keys: readonly K[],
+  client?: SupabaseClient,
 ): Promise<Record<K, string | null>> {
-  const supabase = await createUserClient();
+  const supabase = client ?? (await createUserClient());
   const { data, error } = await supabase
     .from("settings")
     .select("key, value")

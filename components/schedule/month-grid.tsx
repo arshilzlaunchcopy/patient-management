@@ -21,6 +21,12 @@ export function gridEnd(y: number, m1: number): string {
   return addDays(last, offset);
 }
 
+/**
+ * One month, Saturday to Friday. A consultation day reads at a glance:
+ * a teal bar with the video count against capacity, an "Open" tag when new
+ * patients may book it, red when cancelled. Days with nothing on them stay
+ * quiet so the eye goes to the days that matter.
+ */
 export function MonthGrid({
   y,
   m1,
@@ -63,69 +69,88 @@ export function MonthGrid({
           const isToday = date === today;
           const isSelected = date === selected;
           const isPast = date < today;
+          const isFriday = (i + 1) % 7 === 0;
           const cancelled = day?.is_cancelled ?? false;
+          const video = counts?.video ?? 0;
+          const walkIn = counts?.in_person ?? 0;
+          const cap = day?.capacity ?? null;
+          const full = cap !== null && video >= cap;
+          const fill = cap ? Math.min(100, Math.round((video / cap) * 100)) : video ? 100 : 0;
+
+          const title = day
+            ? cancelled
+              ? `${date}: cancelled`
+              : `${date}: video ${video}${cap ? ` of ${cap}` : ""}${walkIn ? `, ${walkIn} walk-in` : ""}${
+                  day.is_open_for_new ? ", open to new patients" : ""
+                }`
+            : `${date}${walkIn ? `: ${walkIn} walk-in` : ""}`;
 
           return (
             <Link
               key={date}
               href={`/schedule?month=${monthPrefix}&day=${date}`}
-              aria-label={date}
+              title={title}
+              aria-label={title}
               aria-current={isSelected ? "true" : undefined}
               className={[
-                "flex min-h-[4.5rem] flex-col border-b border-r border-neutral-100 p-1.5 text-left transition-colors md:min-h-[5.5rem] md:p-2",
-                (i + 1) % 7 === 0 ? "border-r-0" : "",
-                inMonth ? "bg-white" : "bg-neutral-50/60",
-                isSelected
-                  ? "ring-2 ring-inset ring-accent"
-                  : "hover:bg-neutral-50",
-                cancelled ? "bg-red-50/50" : "",
+                "flex min-h-[4.75rem] flex-col gap-1 border-b border-r border-neutral-100 p-1.5 text-left md:min-h-[6rem] md:p-2",
+                isFriday ? "border-r-0" : "",
+                inMonth ? (isFriday ? "bg-neutral-50/70" : "bg-white") : "bg-neutral-50/60",
+                cancelled ? "bg-red-50/60" : "",
+                isSelected ? "ring-2 ring-inset ring-accent" : "hover:bg-accent-soft/30",
               ].join(" ")}
             >
               <div className="flex items-start justify-between gap-1">
                 <span
                   className={[
-                    "inline-flex h-6 w-6 items-center justify-center rounded-full text-sm tabular-nums",
+                    "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm tabular-nums",
                     isToday
                       ? "bg-accent font-semibold text-white"
                       : inMonth
                         ? isPast
                           ? "text-neutral-400"
-                          : "text-neutral-800"
+                          : "font-medium text-neutral-800"
                         : "text-neutral-300",
                     cancelled ? "line-through" : "",
                   ].join(" ")}
                 >
                   {Number(date.slice(8, 10))}
                 </span>
-                {day ? (
-                  <span className="flex items-center gap-1">
-                    {day.is_open_for_new && !cancelled ? (
-                      <span
-                        title="Open to new patients"
-                        className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-accent-strong"
-                      >
-                        new
-                      </span>
-                    ) : null}
-                    <span
-                      title={cancelled ? "Cancelled" : "Consultation day"}
-                      className={`h-2 w-2 rounded-full ${
-                        cancelled ? "bg-red-400" : "bg-accent"
-                      }`}
-                    />
+                {day && !cancelled && day.is_open_for_new ? (
+                  <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-accent-strong">
+                    Open
+                  </span>
+                ) : null}
+                {cancelled ? (
+                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-red-700">
+                    Off
                   </span>
                 ) : null}
               </div>
 
-              {counts ? (
-                <div className="mt-auto flex flex-wrap gap-x-2 gap-y-0.5 pt-1 text-xs tabular-nums text-neutral-600">
-                  {counts.video ? (
-                    <span title="Video bookings">{counts.video} video</span>
-                  ) : null}
-                  {counts.in_person ? (
-                    <span title="Walk-in bookings">{counts.in_person} walk-in</span>
-                  ) : null}
+              {day && !cancelled ? (
+                <div className="mt-auto">
+                  <div className="flex items-baseline justify-between text-xs tabular-nums">
+                    <span className={`font-medium ${full ? "text-amber-700" : "text-neutral-800"}`}>
+                      {video}
+                      {cap ? <span className="text-neutral-400">/{cap}</span> : null}
+                    </span>
+                    <span className="hidden text-neutral-400 md:inline">video</span>
+                  </div>
+                  <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                    <div
+                      className={`h-full rounded-full ${full ? "bg-amber-500" : "bg-accent"}`}
+                      style={{ width: `${fill}%` }}
+                    />
+                  </div>
                 </div>
+              ) : null}
+
+              {walkIn ? (
+                <span className="text-xs tabular-nums text-neutral-600">
+                  {walkIn} <span className="hidden md:inline">walk-in</span>
+                  <span className="md:hidden">w</span>
+                </span>
               ) : null}
             </Link>
           );

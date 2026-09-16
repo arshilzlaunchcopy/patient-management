@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createUserClient } from "@/lib/supabase/server";
 import { displayBD, normalizeBD } from "@/lib/phone";
+import { analyzeSms } from "@/lib/sms/segments";
 import type { SettingKey } from "@/lib/settings";
 
 export interface SettingsFormState {
@@ -54,9 +55,11 @@ export async function saveSettings(
   if (!bkash) errors.bkash_number = "Enter a valid Bangladeshi mobile number.";
   else values.bkash_number = displayBD(bkash);
 
-  const wa = normalizeBD(text(formData, "whatsapp_number"));
-  if (!wa) errors.whatsapp_number = "Enter a valid Bangladeshi mobile number.";
-  else values.whatsapp_number = wa;
+  // Optional: the patient pages simply hide the contact line when it is blank.
+  const waRaw = text(formData, "whatsapp_number");
+  const wa = normalizeBD(waRaw);
+  if (waRaw && !wa) errors.whatsapp_number = "Enter a valid Bangladeshi mobile number, or leave it blank.";
+  else values.whatsapp_number = wa ?? "";
 
   values.video_fee = intField(formData, "video_fee", 0, 100000, errors, "Video fee") ?? undefined;
   values.in_person_fee =
@@ -102,6 +105,69 @@ export async function saveSettings(
   if (error) return { message: `Could not save: ${error.message}` };
 
   revalidatePath("/", "layout");
+  return { savedAt: Date.now() };
+}
+
+export interface TemplatesFormState {
+  errors?: Record<string, string>;
+  message?: string;
+  savedAt?: number;
+}
+
+const MAX_TEMPLATE_SEGMENTS = 3;
+
+/**
+ * Save edited bodies for the automatic SMS templates. Each body must still
+ * contain every placeholder the code fills in, or a booking SMS would go
+ * out without its serial number or link.
+ */
+export async function saveSmsTemplates(
+  _prev: TemplatesFormState,
+  formData: FormData,
+): Promise<TemplatesFormState> {
+  const supabase = await createUserClient();
+  const { data, error } = await supabase
+    .from("sms_templates")
+    .select("id, variables")
+    .not("key", "like", "custom_%");
+  if (error) return { message: `Could not load templates: ${error.message}` };
+
+  const errors: Record<string, string> = {};
+  const updates: { id: string; body_bn: string }[] = [];
+
+  for (const row of (data ?? []) as { id: string; variables: string[] }[]) {
+    const raw = formData.get(`body_${row.id}`);
+    if (raw === null) continue; // not on the form
+    const body = String(raw).trim();
+    if (!body) {
+      errors[row.id] = "The text cannot be empty.";
+      continue;
+    }
+    const missing = (row.variables ?? []).filter(
+      (v) => !new RegExp(`\\{\\{\\s*${v}\\s*\\}\\}`).test(body),
+    );
+    if (missing.length) {
+      errors[row.id] = `Keep ${missing.map((v) => `{{${v}}}`).join(", ")} in the text.`;
+      continue;
+    }
+    if (analyzeSms(body).segments > MAX_TEMPLATE_SEGMENTS) {
+      errors[row.id] = `Keep it to ${MAX_TEMPLATE_SEGMENTS} segments or fewer.`;
+      continue;
+    }
+    updates.push({ id: row.id, body_bn: body });
+  }
+
+  if (Object.keys(errors).length) return { errors };
+
+  for (const u of updates) {
+    const { error: upErr } = await supabase
+      .from("sms_templates")
+      .update({ body_bn: u.body_bn })
+      .eq("id", u.id);
+    if (upErr) return { message: `Could not save: ${upErr.message}` };
+  }
+
+  revalidatePath("/settings");
   return { savedAt: Date.now() };
 }
 

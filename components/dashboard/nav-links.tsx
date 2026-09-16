@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/app/(dashboard)/actions";
 
 const NAV = [
   { href: "/", label: "Today" },
   { href: "/patients", label: "Patients" },
   { href: "/schedule", label: "Schedule" },
   { href: "/bookings", label: "Bookings" },
-  { href: "/outbox", label: "Outbox" },
   { href: "/messages", label: "Messages" },
+  { href: "/outbox", label: "Outbox" },
+  { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
@@ -18,6 +18,10 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+/**
+ * On a phone the links wrap into two rows of chips so every page is one tap
+ * away without scrolling sideways; on a laptop they stack in the sidebar.
+ */
 export function NavLinks({
   pendingReviewCount,
 }: {
@@ -28,7 +32,7 @@ export function NavLinks({
   return (
     <nav
       aria-label="Main"
-      className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:px-3 md:pb-0"
+      className="flex flex-wrap gap-1.5 px-3 pb-3 md:flex-col md:gap-1 md:px-3 md:pb-0"
     >
       {NAV.map(({ href, label }) => {
         const active = isActive(pathname, href);
@@ -39,10 +43,11 @@ export function NavLinks({
             href={href}
             aria-current={active ? "page" : undefined}
             className={[
-              "flex shrink-0 items-center justify-between gap-3 rounded-md px-3 py-2.5 text-base",
+              "flex min-h-11 items-center justify-between gap-2 rounded-md px-2.5 py-2 text-[15px] md:px-3 md:text-base",
+              "border md:border-0",
               active
-                ? "bg-accent-soft font-medium text-accent-strong"
-                : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
+                ? "border-accent bg-accent-soft font-medium text-accent-strong"
+                : "border-neutral-200 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 md:border-transparent",
             ].join(" ")}
           >
             <span>{label}</span>
@@ -57,16 +62,6 @@ export function NavLinks({
           </Link>
         );
       })}
-
-      {/* Sign out lives in the nav row on small screens, in the sidebar footer on desktop. */}
-      <form action={signOut} className="ml-auto shrink-0 md:hidden">
-        <button
-          type="submit"
-          className="rounded-md px-3 py-2.5 text-base text-neutral-700 hover:bg-neutral-100"
-        >
-          Sign out
-        </button>
-      </form>
     </nav>
   );
 }

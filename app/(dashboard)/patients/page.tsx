@@ -49,9 +49,18 @@ export default async function PatientsPage({
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-neutral-900">Patients</h1>
-        <Link href="/patients/new" className={buttonPrimaryClass}>
-          Add patient
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={`/patients/export${filter !== "all" || q ? `?${new URLSearchParams({ ...(filter !== "all" ? { filter } : {}), ...(q ? { q } : {}) })}` : ""}`}
+            className={buttonSecondaryClass}
+            title="Downloads a spreadsheet Excel opens directly"
+          >
+            Export to Excel
+          </a>
+          <Link href="/patients/new" className={buttonPrimaryClass}>
+            Add patient
+          </Link>
+        </div>
       </header>
 
       <div className="mb-4">

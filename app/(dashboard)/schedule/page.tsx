@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  addDays,
   isIsoDate,
   monthLabel,
   parseMonth,
@@ -12,6 +13,7 @@ import { getDayDetail, getMonthOverview } from "@/lib/schedule/queries";
 import { MonthGrid, gridEnd, gridStart } from "@/components/schedule/month-grid";
 import { DayPanel } from "@/components/schedule/day-panel";
 import { BulkOpenForm } from "@/components/schedule/bulk-open-form";
+import { UpcomingDays } from "@/components/schedule/upcoming-days";
 import { buttonSecondaryClass } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Schedule" };
@@ -40,8 +42,9 @@ export default async function SchedulePage({
   const prevParam = toIso(prev.y, prev.m1, 1).slice(0, 7);
   const nextParam = toIso(next.y, next.m1, 1).slice(0, 7);
 
-  const [overview, detail, settings] = await Promise.all([
+  const [overview, upcoming, detail, settings] = await Promise.all([
     getMonthOverview(gridStart(y, m1), gridEnd(y, m1)),
+    getMonthOverview(today, addDays(today, 60)),
     selected ? getDayDetail(selected) : Promise.resolve(null),
     getSettings([
       "default_call_start",
@@ -89,13 +92,7 @@ export default async function SchedulePage({
         <BulkOpenForm />
       </header>
 
-      <div
-        className={
-          selected
-            ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
-            : ""
-        }
-      >
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div>
           <MonthGrid
             y={y}
@@ -106,17 +103,21 @@ export default async function SchedulePage({
           />
           <p className="mt-3 text-sm text-neutral-500">
             <span className="mr-4 inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-accent" /> consultation day
+              <span className="inline-block h-1.5 w-6 rounded-full bg-accent" /> video bookings against capacity
             </span>
             <span className="mr-4 inline-flex items-center gap-1.5">
               <span className="rounded-full bg-accent-soft px-1.5 text-[10px] font-semibold uppercase text-accent-strong">
-                new
+                Open
               </span>
-              open to new patients
+              new patients may book
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-red-400" /> cancelled
+              <span className="rounded-full bg-red-100 px-1.5 text-[10px] font-semibold uppercase text-red-700">
+                Off
+              </span>
+              cancelled
             </span>
+            <span className="ml-4 inline-block">Click any day to open or edit it.</span>
           </p>
         </div>
 
@@ -127,7 +128,9 @@ export default async function SchedulePage({
             defaults={defaults}
             closeHref={`/schedule?month=${monthParam}`}
           />
-        ) : null}
+        ) : (
+          <UpcomingDays overview={upcoming} today={today} />
+        )}
       </div>
     </>
   );

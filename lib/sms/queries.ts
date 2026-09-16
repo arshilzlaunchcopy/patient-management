@@ -15,6 +15,17 @@ export interface SmsLogRow {
 
 export const OUTBOX_LIMIT = 100;
 
+/** Messages not yet handed to the gateway. */
+export async function countQueued(): Promise<number> {
+  const supabase = await createUserClient();
+  const { count, error } = await supabase
+    .from("sms_log")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "queued");
+  if (error) throw new Error(`countQueued: ${error.message}`);
+  return count ?? 0;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Newest first. With a campaign id, only that bulk send's messages. */

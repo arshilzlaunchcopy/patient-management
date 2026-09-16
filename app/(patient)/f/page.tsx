@@ -4,6 +4,7 @@ import {
   bigInputClass,
   bigLabelClass,
   Notice,
+  PageTitle,
 } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,7 @@ export default async function LostLinkPage({
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.followup.lostHeading}</h1>
-      <p className="mt-1 text-base text-neutral-600">{bn.followup.lostIntro}</p>
+      <PageTitle help={bn.followup.lostIntro}>{bn.followup.lostHeading}</PageTitle>
 
       {sent ? (
         <div className="mt-6">

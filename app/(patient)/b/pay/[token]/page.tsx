@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { displayBD } from "@/lib/phone";
 import { bn } from "@/lib/i18n/bn";
 import { formatDateLongBn, toBengaliDigits } from "@/lib/i18n/format";
-import { bigButtonClass, Card, Notice } from "@/components/patient/shell";
+import { bigButtonClass, Card, Notice, PageTitle, Steps } from "@/components/patient/shell";
 import { Countdown } from "@/components/patient/countdown";
 import { CopyButton } from "@/components/patient/copy-button";
 
@@ -47,16 +47,14 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
     );
   }
 
-  const settings = await getSettings(["bkash_number"] as const);
+  const settings = await getSettings(["bkash_number"] as const, supabase);
   const bkash = displayBD(settings.bkash_number ?? "") || settings.bkash_number || "";
   const amount = toBengaliDigits(Math.round(Number(appointment.fee_amount ?? 0)));
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.payHeading}</h1>
-      <p className="mt-1 text-base text-neutral-600">
-        {formatDateLongBn(appointment.scheduled_date)}
-      </p>
+      <Steps current={3} />
+      <PageTitle help={formatDateLongBn(appointment.scheduled_date)}>{bn.payHeading}</PageTitle>
 
       <div className="mt-5 space-y-4">
         <Card>
@@ -67,12 +65,21 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
           </p>
         </Card>
 
-        <Card>
+        <Card tone="accent">
           <p className="text-base text-neutral-600">{bn.bkashNumber}</p>
           <p id="bkash-number" className="my-2 text-3xl font-semibold tabular-nums tracking-wide">
             {bkash}
           </p>
           <CopyButton value={bkash} label={bn.copy} doneLabel={bn.copied} />
+        </Card>
+
+        <Card>
+          <p className="text-base font-semibold text-neutral-800">{bn.payStepsHeading}</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-6 text-base text-neutral-800">
+            {bn.paySteps.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ol>
         </Card>
 
         <Card>

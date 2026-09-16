@@ -95,6 +95,28 @@ export const bn = {
     sentMessage: "যদি এই নম্বরটি নিবন্ধিত থাকে, আমরা একটি লিংক পাঠিয়েছি।",
   },
 
+  // Shell: header, steps, footer
+  clinicSubtitle: "ডায়াবেটিস ও হরমোন রোগ বিশেষজ্ঞ",
+  steps: ["তারিখ", "তথ্য", "পেমেন্ট", "নিশ্চিত"],
+  stepOf: (n: string, total: string) => `ধাপ ${n} / ${total}`,
+  footerContact: "যোগাযোগ",
+  footerWhatsApp: "হোয়াটসঅ্যাপ",
+  footerHelp: "সমস্যা হলে এই নম্বরে মেসেজ দিন।",
+  tapToBook: "বুক করতে চাপ দিন",
+
+  // Payment help
+  payStepsHeading: "কীভাবে পাঠাবেন",
+  paySteps: [
+    "বিকাশ অ্যাপ খুলুন, অথবা *247# ডায়াল করুন",
+    "Send Money বেছে নিন",
+    "উপরের নম্বর ও টাকার পরিমাণ দিন",
+    "পাঠানো হলে মেসেজের TrxID টি রেখে দিন",
+  ],
+
+  // Cancellation SMS the doctor sends from the schedule
+  smsDayCancelled: (date: string) =>
+    `প্রিয় রোগী, দুঃখিত, ${date} তারিখে ডাক্তার বসবেন না। নতুন তারিখ জানানো হবে।`,
+
   loading: "লোড হচ্ছে…",
   errorHeading: "দুঃখিত, কিছু একটা ভুল হয়েছে।",
   errorBody: "একটু পরে আবার চেষ্টা করুন।",

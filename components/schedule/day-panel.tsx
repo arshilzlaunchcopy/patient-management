@@ -6,6 +6,8 @@ import { saveConsultDay, setDayCancelled } from "@/lib/schedule/actions";
 import { ConsultDayForm } from "./consult-day-form";
 import { LIVE_STATUSES, StatusBadge } from "./status";
 import { buttonSecondaryClass, cardClass } from "@/components/ui/styles";
+import { bn } from "@/lib/i18n/bn";
+import { formatDateLongBn } from "@/lib/i18n/format";
 
 export function DayPanel({
   date,
@@ -62,14 +64,14 @@ export function DayPanel({
                   </li>
                 ))}
               </ul>
-              <button
-                type="button"
-                disabled
-                title="SMS sending arrives in a later phase"
-                className="mt-3 inline-flex cursor-not-allowed items-center rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-400"
+              <Link
+                href={`/messages?segment=booked_on&date=${date}&text=${encodeURIComponent(
+                  bn.smsDayCancelled(formatDateLongBn(date)),
+                )}`}
+                className="mt-3 inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100"
               >
-                Notify patients (coming with SMS)
-              </button>
+                Notify them by SMS
+              </Link>
             </>
           ) : (
             <p className="mt-1 text-sm text-red-800">No patients were booked.</p>

@@ -7,7 +7,7 @@ import { ensureConsultDay } from "@/lib/schedule/ensure";
 import { todayDhaka } from "@/lib/dates";
 import { bn } from "@/lib/i18n/bn";
 import { formatDateLongBn, formatWindowBn } from "@/lib/i18n/format";
-import { bigButtonClass, Card, Notice } from "@/components/patient/shell";
+import { bigButtonClass, Card, Notice, PageTitle } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +57,10 @@ export default async function FollowupPage({
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.followup.heading}</h1>
+      <PageTitle>{bn.followup.heading}</PageTitle>
 
       <div className="mt-5">
-        <Card>
+        <Card tone="accent">
           <p className="text-lg">{bn.greeting}</p>
           <p className="mt-2 text-2xl font-semibold">
             {bn.followup.line(formatDateLongBn(t.target_date))}

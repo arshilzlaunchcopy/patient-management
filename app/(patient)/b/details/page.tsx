@@ -11,6 +11,8 @@ import {
   bigLabelClass,
   Card,
   Notice,
+  PageTitle,
+  Steps,
 } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +36,11 @@ export default async function DetailsPage({
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.yourDetails}</h1>
+      <Steps current={2} />
+      <PageTitle>{bn.yourDetails}</PageTitle>
 
       <div className="mt-4">
-        <Card>
+        <Card tone="accent">
           <p className="text-base text-neutral-600">{bn.selectedDate}</p>
           <p className="text-xl font-semibold">{formatDateLongBn(date)}</p>
           {w ? <p className="mt-1 text-base">{bn.callWindow(w.start, w.end)}</p> : null}

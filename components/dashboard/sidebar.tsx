@@ -17,6 +17,15 @@ export function Sidebar({
           </p>
           <p className="text-sm text-neutral-500">Clinic Management</p>
         </div>
+        {/* On a phone sign-out sits up here; on a laptop it is in the sidebar footer. */}
+        <form action={signOut} className="md:hidden">
+          <button
+            type="submit"
+            className="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
 
       <NavLinks pendingReviewCount={pendingReviewCount} />

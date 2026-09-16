@@ -5,7 +5,7 @@ import { resolvePaymentToken } from "@/lib/booking/tokens";
 import { bn } from "@/lib/i18n/bn";
 import { formatDateLongBn, formatWindowBn, toBengaliDigits } from "@/lib/i18n/format";
 import type { ConsultDay } from "@/lib/types";
-import { bigButtonClass, Card, Notice } from "@/components/patient/shell";
+import { bigButtonClass, Card, Notice, Steps } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -43,14 +43,15 @@ export default async function DonePage({
 
   return (
     <>
+      <Steps current={4} />
       <Notice tone="success">
         <p className="text-xl font-semibold">{bn.doneHeading}</p>
       </Notice>
 
       <div className="mt-5">
-        <Card>
+        <Card tone="accent">
           <p className="text-lg text-neutral-600">{bn.serial}</p>
-          <p className="text-6xl font-bold tabular-nums leading-tight">
+          <p className="text-6xl font-bold tabular-nums leading-tight text-accent-strong">
             {appointment.queue_no !== null ? toBengaliDigits(appointment.queue_no) : "—"}
           </p>
           <p className="mt-4 text-xl font-medium">

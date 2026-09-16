@@ -9,14 +9,14 @@ import {
   toBengaliDigits,
   weekdayBn,
 } from "@/lib/i18n/format";
-import { Notice } from "@/components/patient/shell";
+import { Notice, PageTitle, Steps } from "@/components/patient/shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function PickDatePage() {
   const supabase = createServiceClient();
   const [settings, dates] = await Promise.all([
-    getSettings(["booking_open"] as const),
+    getSettings(["booking_open"] as const, supabase),
     getOpenDates(supabase),
   ]);
 
@@ -26,8 +26,8 @@ export default async function PickDatePage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{bn.pickDate}</h1>
-      <p className="mt-1 text-base text-neutral-600">{bn.pickDateHelp}</p>
+      <Steps current={1} />
+      <PageTitle help={bn.pickDateHelp}>{bn.pickDate}</PageTitle>
 
       {dates.length === 0 ? (
         <div className="mt-6">
@@ -37,28 +37,31 @@ export default async function PickDatePage() {
           </Notice>
         </div>
       ) : (
-        <ul
-          className="-mx-4 mt-6 flex snap-x gap-3 overflow-x-auto px-4 pb-3"
-          aria-label={bn.pickDate}
-        >
+        <ul className="mt-5 space-y-3" aria-label={bn.pickDate}>
           {dates.map((d) => {
             const w = formatWindowBn(d.call_start, d.call_end);
+            const few = d.remaining !== null && d.remaining <= 5;
             return (
-              <li key={d.date} className="snap-start">
+              <li key={d.date}>
                 <Link
                   href={`/b/details?date=${d.date}`}
-                  className="flex min-h-36 w-36 flex-col justify-between rounded-lg border-2 border-neutral-300 bg-white p-4 active:border-accent active:bg-accent-soft"
+                  className="flex min-h-20 items-center gap-4 rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 active:border-accent active:bg-accent-soft"
                 >
-                  <span className="text-base text-neutral-600">{weekdayBn(d.date)}</span>
-                  <span className="text-2xl font-semibold">{formatDateBn(d.date)}</span>
-                  <span className="text-base leading-snug text-neutral-800">
-                    {bn.chipWindow(w.start, w.end)}
+                  <span className="flex w-20 shrink-0 flex-col items-center rounded-lg bg-accent-soft py-2 text-accent-strong">
+                    <span className="text-2xl font-bold leading-none">{formatDateBn(d.date)}</span>
+                    <span className="mt-1 text-sm">{weekdayBn(d.date)}</span>
                   </span>
-                  {d.remaining !== null && d.remaining <= 5 ? (
-                    <span className="text-sm text-accent-strong">
-                      {bn.remaining(toBengaliDigits(d.remaining))}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-lg font-medium leading-snug text-neutral-900">
+                      {bn.callWindow(w.start, w.end)}
                     </span>
-                  ) : null}
+                    <span className={`block text-base ${few ? "text-accent-strong" : "text-neutral-500"}`}>
+                      {few ? bn.remaining(toBengaliDigits(d.remaining!)) : bn.tapToBook}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="text-3xl leading-none text-neutral-400">
+                    ›
+                  </span>
                 </Link>
               </li>
             );

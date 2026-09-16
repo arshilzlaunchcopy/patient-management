@@ -6,10 +6,19 @@ import { countSegments } from "./segments";
 /**
  * The only file that knows how messages leave the system.
  *
- * Today there is no gateway: every message is written to sms_log with
- * status 'queued' and echoed to the console. To go live with sms.bd,
- * implement `deliver()` below and nothing else changes.
+ * Every message is written to sms_log first. If SMS_API_KEY is set, it is
+ * then handed to sms.net.bd and marked sent or failed; if not, it stays
+ * 'queued' and can be sent later from the Outbox once the key is added.
+ * Nothing outside this file knows which gateway is in use.
  */
+
+const GATEWAY_URL = "https://api.sms.net.bd/sendsms";
+const GATEWAY_TIMEOUT_MS = 15_000;
+
+/** True when a gateway key is configured, so messages really go out. Read lazily. */
+export function smsGatewayConfigured(): boolean {
+  return !!process.env.SMS_API_KEY;
+}
 
 export interface SendSmsInput {
   to: string;
@@ -31,15 +40,81 @@ interface DeliveryResult {
 }
 
 /**
- * Hand a message to the gateway. Stub: leaves it queued.
- *
- * sms.bd later:
- *   const res = await fetch("https://api.sms.net.bd/sendsms", { ... });
- *   return res.ok ? { status: "sent", providerRequestId } : { status: "failed", error };
+ * Hand one message to sms.net.bd. Their API takes a form POST with
+ * api_key, to (8801XXXXXXXXX) and msg, plus an optional approved sender_id,
+ * and answers JSON: { error: 0, msg, data: { request_id } } on success or a
+ * non-zero error with a message. Bangla is sent as-is; the gateway counts
+ * the segments the same way lib/sms/segments does.
  */
 async function deliver(to: string, body: string): Promise<DeliveryResult> {
-  console.log(`[sms] queued → ${to}: ${body}`);
-  return { status: "queued" };
+  const apiKey = process.env.SMS_API_KEY;
+  if (!apiKey) {
+    console.log(`[sms] queued (no SMS_API_KEY) → ${to}: ${body}`);
+    return { status: "queued" };
+  }
+
+  const params = new URLSearchParams({ api_key: apiKey, to, msg: body });
+  const senderId = process.env.SMS_SENDER_ID;
+  if (senderId) params.set("sender_id", senderId);
+
+  try {
+    const res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+      signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
+    });
+    const json = (await res.json().catch(() => null)) as {
+      error?: number | string;
+      msg?: string;
+      data?: { request_id?: number | string };
+    } | null;
+
+    if (res.ok && json && Number(json.error) === 0) {
+      const id = json.data?.request_id;
+      return { status: "sent", providerRequestId: id != null ? String(id) : undefined };
+    }
+    return { status: "failed", error: json?.msg ?? `Gateway returned HTTP ${res.status}` };
+  } catch (e) {
+    return { status: "failed", error: e instanceof Error ? e.message : "Network error" };
+  }
+}
+
+/**
+ * Push messages that are still 'queued' through the gateway, oldest first.
+ * Used by the Outbox button after SMS_API_KEY is added, or after an outage.
+ * Does nothing without a key, so the button can be shown safely.
+ */
+export async function deliverQueued(limit = 100): Promise<BulkSmsResult & { remaining: number }> {
+  const result = { queued: 0, sent: 0, failed: 0, remaining: 0 };
+  if (!smsGatewayConfigured()) return result;
+
+  const supabase = createServiceClient();
+  const { data, error, count } = await supabase
+    .from("sms_log")
+    .select("id, phone, body", { count: "exact" })
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(`deliverQueued: ${error.message}`);
+
+  const rows = (data ?? []) as { id: string; phone: string; body: string }[];
+  for (const row of rows) {
+    const d = await deliver(row.phone, row.body);
+    result[d.status] += 1;
+    if (d.status === "queued") continue;
+    await supabase
+      .from("sms_log")
+      .update({
+        status: d.status,
+        provider_request_id: d.providerRequestId ?? null,
+        error_message: d.error ?? null,
+        sent_at: d.status === "sent" ? new Date().toISOString() : null,
+      })
+      .eq("id", row.id);
+  }
+  result.remaining = Math.max(0, (count ?? rows.length) - rows.length);
+  return result;
 }
 
 export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {

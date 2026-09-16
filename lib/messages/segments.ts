@@ -16,6 +16,7 @@ export const SEGMENT_KEYS = [
   "not_seen",
   "booked_on",
   "type",
+  "custom",
   "patient",
 ] as const;
 export type SegmentKey = (typeof SEGMENT_KEYS)[number];
@@ -42,6 +43,10 @@ export const SEGMENTS: Record<SegmentKey, { label: string; help: string }> = {
     help: "Everyone with a live booking on that day, video and chamber. Useful when the call window changes.",
   },
   type: { label: "By diabetes type", help: "Active patients with the chosen type." },
+  custom: {
+    label: "Choose patients myself",
+    help: "Search and tick anyone you like, as many as you want. No rule, just your list.",
+  },
   patient: { label: "One patient", help: "A single message to one person." },
 };
 
@@ -50,6 +55,8 @@ export interface SegmentFilter {
   date?: string;
   type?: DiabetesType;
   patient?: string;
+  /** Hand-picked patient ids for the "custom" audience. */
+  ids?: string[];
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -73,6 +80,15 @@ export function parseSegment(
     if (input.patient && UUID_RE.test(input.patient)) out.patient = input.patient;
     else out.segment = "all";
   }
+  if (segment === "custom") {
+    // Comma-separated in the form field; anything that is not a uuid is dropped.
+    const seen = new Set<string>();
+    for (const part of (input.ids ?? "").split(",")) {
+      const id = part.trim().toLowerCase();
+      if (UUID_RE.test(id) && !seen.has(id) && seen.size < MAX_RECIPIENTS) seen.add(id);
+    }
+    out.ids = Array.from(seen);
+  }
   return out;
 }
 
@@ -94,6 +110,8 @@ export function describeSegment(f: SegmentFilter, patientName?: string): string 
       return `${f.type} patients`;
     case "patient":
       return patientName ? `One patient: ${patientName}` : "One patient";
+    case "custom":
+      return f.ids?.length ? `Chosen patients (${f.ids.length})` : "Chosen patients";
     default:
       return SEGMENTS[f.segment].label;
   }
@@ -188,6 +206,25 @@ export async function resolveRecipients(
         .maybeSingle();
       if (error) throw new Error(`segment patient: ${error.message}`);
       return data ? fromPatients([data as Row]) : [];
+    }
+    case "custom": {
+      const ids = f.ids ?? [];
+      if (ids.length === 0) return [];
+      // `in` filters travel in the URL, so look the ids up in batches.
+      const BATCH = 100;
+      const rows: Row[] = [];
+      for (let i = 0; i < ids.length; i += BATCH) {
+        const { data, error } = await supabase
+          .from("patients")
+          .select(PATIENT_COLS)
+          .in("id", ids.slice(i, i + BATCH));
+        if (error) throw new Error(`segment custom: ${error.message}`);
+        rows.push(...((data ?? []) as Row[]));
+      }
+      // Keep the order the doctor picked them in.
+      const order = new Map(ids.map((id, i) => [id, i]));
+      rows.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
+      return fromPatients(rows);
     }
     case "overdue": {
       const rows = await paged("segment overdue", (a, b) =>

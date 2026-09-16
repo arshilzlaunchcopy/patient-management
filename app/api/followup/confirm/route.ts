@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!day || day.is_cancelled) return back("cancelled");
     if (full) return back("full");
 
-    const settings = await getSettings(["hold_minutes", "video_fee"] as const);
+    const settings = await getSettings(["hold_minutes", "video_fee"] as const, supabase);
     const { paymentToken } = await createHold(supabase, {
       patientId: t.patient_id,
       date: t.target_date,
