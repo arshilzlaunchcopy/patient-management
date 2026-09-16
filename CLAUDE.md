@@ -32,7 +32,7 @@ These exist so that anything working locally works identically once deployed. Do
 
 ## Database changes
 
-Write migrations as SQL files in `supabase/migrations/`, numbered in order. They are applied by pasting into the Supabase SQL editor in a browser — there are no local database credentials, so never write a Node script that connects to Supabase directly.
+Write migrations as SQL files in `supabase/migrations/`, numbered in order. They are applied by pasting into the Supabase SQL editor in a browser — there are no local database credentials, so never write a Node script that connects to Supabase directly. `supabase/setup.sql` is all migrations concatenated for first-time setup; append any new migration to it as well, and add its table to the probe list in `lib/supabase/schema.ts` if it creates one.
 
 ## Conventions
 

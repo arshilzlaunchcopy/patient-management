@@ -47,8 +47,16 @@ export const SETTING_KEYS = [
   "reminder_days_before",
   "reminder_send_hour",
   "booking_open",
+  "sms_price_per_segment",
 ] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
+
+/** Parse a settings value as a non-negative decimal, else fall back. Blank counts as unset. */
+export function settingNumber(value: string | null, fallback: number): number {
+  if (value === null || value.trim() === "") return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
 /** Parse a settings value as 'HH:MM', else fall back. */
 export function settingTime(value: string | null, fallback: string): string {

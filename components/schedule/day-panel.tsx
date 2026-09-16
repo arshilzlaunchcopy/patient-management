@@ -103,12 +103,22 @@ export function DayPanel({
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Booked
-          {bookings.length ? (
-            <span className="ml-2 font-normal normal-case tracking-normal text-neutral-500">
-              {bookings.length}
-            </span>
+        <h3 className="mb-3 flex items-baseline justify-between gap-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <span>
+            Booked
+            {bookings.length ? (
+              <span className="ml-2 font-normal normal-case tracking-normal text-neutral-500">
+                {bookings.length}
+              </span>
+            ) : null}
+          </span>
+          {affected.length ? (
+            <Link
+              href={`/messages?segment=booked_on&date=${date}`}
+              className="font-medium normal-case tracking-normal text-accent-strong hover:underline"
+            >
+              Message all
+            </Link>
           ) : null}
         </h3>
         {bookings.length === 0 ? (

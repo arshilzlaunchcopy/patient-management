@@ -13,6 +13,9 @@ const GSM7_EXTENDED = "\f^{}\\[~]|€";
 
 export type SmsEncoding = "gsm" | "ucs2";
 
+/** Longest message a bulk send may carry per patient. Keeps a typo from costing a fortune. */
+export const MAX_CAMPAIGN_SEGMENTS = 5;
+
 export interface SmsAnalysis {
   encoding: SmsEncoding;
   /** Length in the units the encoding counts: septets for GSM, UTF-16 units for UCS-2. */

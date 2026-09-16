@@ -130,6 +130,17 @@ export function SettingsForm({ values }: { values: Values }) {
         </label>
       </Section>
 
+      <Section title="Messages">
+        <Field
+          name="sms_price_per_segment"
+          label="SMS price per segment (৳)"
+          help="What the gateway charges for one segment. Only used for the cost estimate on the Messages page."
+          errors={errors}
+        >
+          <input id="sms_price_per_segment" name="sms_price_per_segment" type="text" inputMode="decimal" defaultValue={values.sms_price_per_segment} className={`${inputClass} tabular-nums`} {...inv("sms_price_per_segment")} />
+        </Field>
+      </Section>
+
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className={buttonPrimaryClass}>
           {pending ? "Saving…" : "Save settings"}

@@ -59,10 +59,12 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // getUser() validates the JWT against Supabase; never trust getSession() here.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the JWT signature and expiry (locally with the
+  // project's public key, or via the auth server on legacy secret-key
+  // projects), refreshing the session first if it has expired. Never trust
+  // getSession() here: it does not verify anything.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims ? claims.claims : null;
 
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = request.nextUrl.clone();

@@ -85,3 +85,80 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
 
   return { id: data.id as string, status: result.status, error: result.error };
 }
+
+export interface BulkSmsResult {
+  queued: number;
+  sent: number;
+  failed: number;
+}
+
+const INSERT_CHUNK = 500;
+
+/**
+ * Queue the same message to many patients (the Messages page). Rows are
+ * written to sms_log in chunks so a campaign to a thousand patients is a
+ * couple of requests, not a thousand. Delivery goes through the same
+ * `deliver()` as single messages.
+ */
+export async function sendBulkSms(
+  messages: SendSmsInput[],
+  campaignId: string | null,
+): Promise<BulkSmsResult> {
+  const result: BulkSmsResult = { queued: 0, sent: 0, failed: 0 };
+  const rows: {
+    phone: string;
+    body: string;
+    segments: number;
+    status: "queued";
+    patient_id: string | null;
+    campaign_id: string | null;
+  }[] = [];
+
+  for (const m of messages) {
+    const to = normalizeBD(m.to);
+    if (!to) {
+      result.failed += 1;
+      continue;
+    }
+    rows.push({
+      phone: to,
+      body: m.body,
+      segments: countSegments(m.body),
+      status: "queued",
+      patient_id: m.patientId ?? null,
+      campaign_id: campaignId,
+    });
+  }
+
+  const supabase = createServiceClient();
+
+  for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+    const chunk = rows.slice(i, i + INSERT_CHUNK);
+    const { data, error } = await supabase.from("sms_log").insert(chunk).select("id, phone, body");
+    if (error || !data) {
+      console.error("[sms] bulk insert failed", error?.message);
+      result.failed += chunk.length;
+      continue;
+    }
+
+    for (const row of data as { id: string; phone: string; body: string }[]) {
+      const d = await deliver(row.phone, row.body);
+      if (d.status === "queued") {
+        result.queued += 1;
+        continue;
+      }
+      result[d.status] += 1;
+      await supabase
+        .from("sms_log")
+        .update({
+          status: d.status,
+          provider_request_id: d.providerRequestId ?? null,
+          error_message: d.error ?? null,
+          sent_at: d.status === "sent" ? new Date().toISOString() : null,
+        })
+        .eq("id", row.id);
+    }
+  }
+
+  return result;
+}

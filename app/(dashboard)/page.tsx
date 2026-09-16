@@ -123,6 +123,17 @@ export default async function TodayPage() {
         </div>
       ) : (
         <div className="space-y-10">
+          {counters.booked > 0 ? (
+            <p className="-mb-4 text-sm text-neutral-600">
+              Running late, or the call window moved?{" "}
+              <Link
+                href={`/messages?segment=booked_on&date=${today}`}
+                className="font-medium text-accent-strong hover:underline"
+              >
+                Message everyone booked today
+              </Link>
+            </p>
+          ) : null}
           <QueueList
             title="Video queue"
             rows={video}

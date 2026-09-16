@@ -7,7 +7,7 @@ import { formatDate, todayDhaka } from "@/lib/dates";
 import { sendFollowupLinkAction } from "@/lib/followup/actions";
 import { ageSexLabel, sexLabel } from "@/components/patients/labels";
 import { VisitHistory } from "@/components/patients/visit-history";
-import { TrendCharts } from "@/components/patients/trend-charts";
+import { TrendChartsLazy } from "@/components/patients/trend-charts-lazy";
 import {
   buttonPrimaryClass,
   buttonSecondaryClass,
@@ -130,6 +130,12 @@ export default async function PatientPage({
               </a>
             ) : null}
             <Link
+              href={`/messages?segment=patient&patient=${patient.id}`}
+              className={buttonSecondaryClass}
+            >
+              Send SMS
+            </Link>
+            <Link
               href={`/patients/${patient.id}/edit`}
               className={buttonSecondaryClass}
             >
@@ -174,7 +180,7 @@ export default async function PatientPage({
         </dl>
       </section>
 
-      <TrendCharts visits={visits} />
+      <TrendChartsLazy visits={visits} />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-neutral-900">

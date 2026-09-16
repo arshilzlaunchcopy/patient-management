@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const DEBOUNCE_MS = 300;
 
 /**
  * Debounced search box that keeps the term in the URL (?q=) so the page
  * stays server-rendered and the result is shareable and refresh-safe.
+ * Other parameters (the follow-up filter) are left as they are.
  */
 export function PatientSearch({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [value, setValue] = useState(initialQuery);
   const [isPending, startTransition] = useTransition();
   const lastPushed = useRef(initialQuery);
@@ -22,8 +24,9 @@ export function PatientSearch({ initialQuery }: { initialQuery: string }) {
 
     const handle = setTimeout(() => {
       lastPushed.current = term;
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(searchParams.toString());
       if (term) params.set("q", term);
+      else params.delete("q");
       const qs = params.toString();
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -31,7 +34,7 @@ export function PatientSearch({ initialQuery }: { initialQuery: string }) {
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(handle);
-  }, [value, pathname, router]);
+  }, [value, pathname, router, searchParams]);
 
   return (
     <div className="relative">

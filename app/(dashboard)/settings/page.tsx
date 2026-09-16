@@ -23,6 +23,7 @@ const DEFAULTS: Record<SettingKey, string> = {
   reminder_days_before: "2",
   reminder_send_hour: "10",
   booking_open: "true",
+  sms_price_per_segment: "0.30",
 };
 
 export default async function SettingsPage() {

@@ -1,6 +1,8 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import { phoneSearchPrefix } from "@/lib/phone";
+import { addDays, addMonths, todayDhaka } from "@/lib/dates";
+import { DUE_SOON_DAYS, NOT_SEEN_MONTHS } from "@/lib/messages/segments";
 import type { Patient, Visit } from "@/lib/types";
 
 export interface PatientListRow {
@@ -16,7 +18,20 @@ export interface PatientListRow {
   next_visit_date: string | null;
 }
 
-const LIST_LIMIT = 200;
+export const LIST_LIMIT = 200;
+
+/**
+ * Follow-up filters on the patient list. They match the audiences on the
+ * Messages page so "Message these patients" carries the same set across.
+ */
+export const PATIENT_FILTERS = ["all", "overdue", "due_soon", "not_seen"] as const;
+export type PatientFilter = (typeof PATIENT_FILTERS)[number];
+
+export function parsePatientFilter(value: string | undefined): PatientFilter {
+  return (PATIENT_FILTERS as readonly string[]).includes(value ?? "")
+    ? (value as PatientFilter)
+    : "all";
+}
 
 /**
  * PostgREST's .or() filter uses commas and parentheses as syntax, so a
@@ -27,11 +42,26 @@ function sanitiseTerm(q: string): string {
   return q.replace(/[,()"'%_\\]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function searchClauses(q: string): string | null {
+  const term = sanitiseTerm(q);
+  if (!term) return null;
+  const clauses = [`name.ilike.%${term}%`, `serial_no.ilike.%${term}%`];
+  const prefix = phoneSearchPrefix(term);
+  if (prefix) clauses.push(`phone.like.${prefix}%`);
+  return clauses.join(",");
+}
+
 /**
  * Active patients with their most recent visit, optionally filtered by a
- * search term matched against name, serial and phone (any phone format).
+ * search term matched against name, serial and phone (any phone format),
+ * and by a follow-up filter.
  */
-export async function listPatients(q: string): Promise<PatientListRow[]> {
+export async function listPatients(
+  q: string,
+  filter: PatientFilter = "all",
+): Promise<PatientListRow[]> {
+  if (filter !== "all") return listByLatestVisit(q, filter);
+
   const supabase = await createUserClient();
 
   let query = supabase
@@ -66,6 +96,56 @@ export async function listPatients(q: string): Promise<PatientListRow[]> {
     ...p,
     last_visit_date: visits[0]?.visit_date ?? null,
     next_visit_date: visits[0]?.next_visit_date ?? null,
+  }));
+}
+
+/**
+ * The follow-up filters read the patient_latest_visits view (migration 006),
+ * which carries the patient columns alongside their latest visit, so one
+ * query answers "who is overdue" in the order the doctor should call them.
+ */
+async function listByLatestVisit(
+  q: string,
+  filter: Exclude<PatientFilter, "all">,
+): Promise<PatientListRow[]> {
+  const supabase = await createUserClient();
+  const today = todayDhaka();
+
+  let query = supabase
+    .from("patient_latest_visits")
+    .select(
+      "patient_id, serial_no, name, phone, sex, date_of_birth, age_years, diabetes_type, visit_date, next_visit_date",
+    )
+    .eq("patient_status", "active")
+    .limit(LIST_LIMIT);
+
+  if (filter === "overdue") {
+    query = query.lt("next_visit_date", today).order("next_visit_date", { ascending: true });
+  } else if (filter === "due_soon") {
+    query = query
+      .gte("next_visit_date", today)
+      .lte("next_visit_date", addDays(today, DUE_SOON_DAYS))
+      .order("next_visit_date", { ascending: true });
+  } else {
+    query = query
+      .lt("visit_date", addMonths(today, -NOT_SEEN_MONTHS))
+      .order("visit_date", { ascending: true });
+  }
+
+  const clauses = searchClauses(q);
+  if (clauses) query = query.or(clauses);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`listPatients(${filter}): ${error.message}`);
+
+  type Raw = Omit<PatientListRow, "id" | "last_visit_date"> & {
+    patient_id: string;
+    visit_date: string;
+  };
+  return ((data ?? []) as unknown as Raw[]).map(({ patient_id, visit_date, ...p }) => ({
+    ...p,
+    id: patient_id,
+    last_visit_date: visit_date,
   }));
 }
 

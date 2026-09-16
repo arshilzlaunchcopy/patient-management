@@ -83,6 +83,14 @@ export async function saveSettings(
 
   values.booking_open = formData.get("booking_open") === "on" ? "true" : "false";
 
+  const price = text(formData, "sms_price_per_segment");
+  const priceNum = Number(price);
+  if (price === "" || !Number.isFinite(priceNum) || priceNum < 0 || priceNum > 50) {
+    errors.sms_price_per_segment = "Enter the price of one SMS segment, from 0 to 50 taka.";
+  } else {
+    values.sms_price_per_segment = String(priceNum);
+  }
+
   if (Object.keys(errors).length) return { errors };
 
   const rows = Object.entries(values)

@@ -28,7 +28,7 @@ delete from patients where source = 'online_booking' and status = 'pending';
 
 delete from consult_days where id::text like '00000000-0000-4000-8000-0000000%';
 
-delete from followup_requests;
+delete from followup_requests where true;  -- Supabase rejects DELETE without WHERE
 
 -- PATIENTS (25)
 insert into patients (id, serial_no, name, phone, sex, age_years, address, diabetes_type, diagnosed_on, comorbidities, status, source, created_at) values

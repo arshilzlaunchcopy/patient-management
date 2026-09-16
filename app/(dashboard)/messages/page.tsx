@@ -1,16 +1,166 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { createUserClient } from "@/lib/supabase/server";
+import {
+  describeSegment,
+  parseSegment,
+  resolveRecipients,
+  SEGMENT_KEYS,
+  SEGMENTS,
+  segmentQuery,
+} from "@/lib/messages/segments";
+import { listCampaigns } from "@/lib/messages/queries";
+import { getSettings, settingNumber } from "@/lib/settings";
+import { formatDateTime } from "@/lib/dates";
+import { displayBD } from "@/lib/phone";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { AudiencePicker } from "@/components/messages/audience-picker";
+import { ComposeForm } from "@/components/messages/compose-form";
+import { cardClass } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Messages" };
 
-export default function MessagesPage() {
+const PREVIEW_ROWS = 40;
+
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ segment?: string; date?: string; type?: string; patient?: string }>;
+}) {
+  const sp = await searchParams;
+  const filter = parseSegment(sp);
+  const supabase = await createUserClient();
+
+  const [recipients, settings, campaigns] = await Promise.all([
+    resolveRecipients(supabase, filter),
+    getSettings(["sms_price_per_segment"] as const),
+    listCampaigns(),
+  ]);
+  const price = settingNumber(settings.sms_price_per_segment, 0.3);
+  const audienceLabel = describeSegment(
+    filter,
+    filter.segment === "patient" ? recipients[0]?.name : undefined,
+  );
+
+  // The picker never offers "one patient"; that audience comes from a patient's page.
+  const options = SEGMENT_KEYS.filter((k) => k !== "patient" || filter.segment === "patient").map(
+    (k) => ({ key: k, label: k === "patient" ? audienceLabel : SEGMENTS[k].label }),
+  );
+
+  const hidden: Record<string, string> = { segment: filter.segment };
+  if (filter.date) hidden.date = filter.date;
+  if (filter.type) hidden.type = filter.type;
+  if (filter.patient) hidden.patient = filter.patient;
+
   return (
     <>
       <PageHeader
         title="Messages"
-        description="Compose and send SMS to groups of patients."
+        description="Pick who should get it, write it in Bangla, check the cost, send. Every message lands in the Outbox."
       />
-      <p className="text-neutral-500">Nothing here yet.</p>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
+        <section className={`${cardClass} p-5`} aria-labelledby="audience-heading">
+          <h2 id="audience-heading" className="mb-4 text-base font-semibold text-neutral-900">
+            Audience
+          </h2>
+          <AudiencePicker
+            options={options}
+            segment={filter.segment}
+            date={filter.date ?? ""}
+            type={filter.type ?? ""}
+            help={SEGMENTS[filter.segment].help}
+          />
+
+          <h3 className="mt-6 flex items-baseline gap-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Recipients
+            <span className="font-normal normal-case tracking-normal">{recipients.length}</span>
+          </h3>
+          {recipients.length === 0 ? (
+            <p className="mt-2 text-base text-neutral-500">Nobody matches this audience yet.</p>
+          ) : (
+            <>
+              <ul className="mt-2 divide-y divide-neutral-100">
+                {recipients.slice(0, PREVIEW_ROWS).map((r) => (
+                  <li key={r.id} className="flex items-baseline justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/patients/${r.id}`}
+                        className="block truncate text-base font-medium text-accent-strong hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                      <p className="text-sm text-neutral-600">
+                        <span className="tabular-nums">{displayBD(r.phone)}</span>
+                        {r.serial_no ? <span className="ml-2 text-neutral-400">{r.serial_no}</span> : null}
+                      </p>
+                    </div>
+                    {r.detail ? (
+                      <span className="shrink-0 text-sm text-neutral-500">{r.detail}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {recipients.length > PREVIEW_ROWS ? (
+                <p className="mt-2 text-sm text-neutral-500">
+                  and {recipients.length - PREVIEW_ROWS} more.
+                </p>
+              ) : null}
+            </>
+          )}
+        </section>
+
+        <section className={`${cardClass} p-5`} aria-labelledby="compose-heading">
+          <h2 id="compose-heading" className="mb-4 text-base font-semibold text-neutral-900">
+            Message to {audienceLabel.toLowerCase()}
+          </h2>
+          <ComposeForm
+            key={segmentQuery(filter)}
+            hidden={hidden}
+            recipientCount={recipients.length}
+            audienceLabel={audienceLabel}
+            pricePerSegment={price}
+          />
+        </section>
+      </div>
+
+      <section className="mt-10" aria-labelledby="history-heading">
+        <h2 id="history-heading" className="mb-3 text-lg font-semibold text-neutral-900">
+          Sent before
+        </h2>
+        {campaigns.length === 0 ? (
+          <div className={`${cardClass} p-8 text-center`}>
+            <p className="text-base text-neutral-600">Nothing sent yet.</p>
+          </div>
+        ) : (
+          <ol className={`${cardClass} divide-y divide-neutral-100`}>
+            {campaigns.map((c) => (
+              <li key={c.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <p className="text-base font-medium text-neutral-900">{c.name ?? "Message"}</p>
+                  <p className="text-sm tabular-nums text-neutral-500">{formatDateTime(c.created_at)}</p>
+                </div>
+                <p className="mt-1 line-clamp-2 text-base text-neutral-800" lang="bn">
+                  {c.body}
+                </p>
+                <p className="mt-2 text-sm text-neutral-600">
+                  <span className="tabular-nums">{c.recipient_count}</span>{" "}
+                  {c.recipient_count === 1 ? "patient" : "patients"}
+                  {c.failed_count ? (
+                    <span className="ml-2 text-red-700">{c.failed_count} failed</span>
+                  ) : null}
+                  <Link
+                    href={`/outbox?campaign=${c.id}`}
+                    className="ml-3 font-medium text-accent-strong hover:underline"
+                  >
+                    Open in Outbox
+                  </Link>
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </>
   );
 }

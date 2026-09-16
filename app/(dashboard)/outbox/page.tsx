@@ -14,8 +14,13 @@ const STATUS: Record<string, { label: string; className: string }> = {
   failed: { label: "Failed", className: "bg-red-50 text-red-700" },
 };
 
-export default async function OutboxPage() {
-  const rows = await listSmsLog();
+export default async function OutboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ campaign?: string }>;
+}) {
+  const { campaign } = await searchParams;
+  const rows = await listSmsLog(campaign);
 
   return (
     <>
@@ -26,6 +31,14 @@ export default async function OutboxPage() {
           yet, so messages stay queued. Links inside a message can be opened here to
           walk through the patient flow.
         </p>
+        {campaign ? (
+          <p className="mt-2 text-sm text-neutral-600">
+            Showing one bulk send only.{" "}
+            <Link href="/outbox" className="font-medium text-accent-strong hover:underline">
+              Show everything
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       {rows.length === 0 ? (
