@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getToken, isExpired } from "@/lib/booking/tokens";
+import { bumpTokenUse, getToken, hasUsesLeft, isExpired } from "@/lib/booking/tokens";
 import { findLiveAppointment, findPaymentToken } from "@/lib/booking/holds";
 import { getDayAvailability } from "@/lib/availability";
 import { ensureConsultDay } from "@/lib/schedule/ensure";
@@ -14,6 +14,11 @@ export const dynamic = "force-dynamic";
 /**
  * Flow B, step 1. The token fixes the patient and the date; there is nothing
  * to choose. No name is shown anywhere.
+ *
+ * The link stays usable for several opens (see MAX_FOLLOWUP_LINK_USES) and
+ * until the day after the follow-up date, so a patient who comes back to
+ * the SMS to finish paying is sent to where they left off, not to an
+ * "expired" screen.
  */
 export default async function FollowupPage({
   params,
@@ -33,7 +38,7 @@ export default async function FollowupPage({
     !t.patient_id ||
     !t.target_date ||
     isExpired(t) ||
-    t.used_at ||
+    !hasUsesLeft(t) ||
     t.target_date < today
   ) {
     return (
@@ -51,6 +56,7 @@ export default async function FollowupPage({
     if (pay) redirect(live.status === "hold" ? `/b/pay/${pay}` : `/b/done?t=${pay}`);
   }
 
+  await bumpTokenUse(supabase, t);
   await ensureConsultDay(supabase, t.target_date);
   const { day, full } = await getDayAvailability(supabase, t.target_date);
   const w = day ? formatWindowBn(day.call_start, day.call_end) : null;

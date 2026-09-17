@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { signIn } from "./actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -70,12 +71,12 @@ export default async function LoginPage({
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            className="w-full rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-2"
+          <SubmitButton
+            pendingText="Signing in…"
+            className="flex w-full items-center justify-center rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-2 disabled:cursor-progress disabled:opacity-60"
           >
             Sign in
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </main>

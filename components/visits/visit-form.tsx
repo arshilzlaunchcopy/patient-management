@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 import type { VisitFormState } from "@/lib/visits/actions";
 import type { VisitInput } from "@/lib/visits/validation";
+import type { PaymentMethod } from "@/lib/types";
 import { addMonths, formatDate } from "@/lib/dates";
 import {
   buttonPrimaryClass,
@@ -73,6 +74,9 @@ export function VisitForm({
   patientId,
   defaultDate,
   defaultMode,
+  defaultPaymentMethod = "cash",
+  defaultFee = null,
+  paymentNote,
   fees,
   cancelHref,
 }: {
@@ -80,6 +84,11 @@ export function VisitForm({
   patientId: string;
   defaultDate: string;
   defaultMode: VisitInput["mode"];
+  /** "bkash" when the linked booking was paid online, so the report counts it right. */
+  defaultPaymentMethod?: PaymentMethod;
+  /** The amount already paid online, if any; otherwise the fee for the mode. */
+  defaultFee?: number | null;
+  paymentNote?: string;
   fees: { in_person: number; video: number };
   cancelHref: string;
 }) {
@@ -88,8 +97,8 @@ export function VisitForm({
 
   const [visitDate, setVisitDate] = useState(defaultDate);
   const [mode, setMode] = useState<VisitInput["mode"]>(defaultMode);
-  const [fee, setFee] = useState(String(fees[defaultMode]));
-  const [feeTouched, setFeeTouched] = useState(false);
+  const [fee, setFee] = useState(String(defaultFee ?? fees[defaultMode]));
+  const [feeTouched, setFeeTouched] = useState(defaultFee !== null);
   const [nextVisit, setNextVisit] = useState("");
 
   const invalid = (k: keyof VisitInput) => ({
@@ -158,7 +167,7 @@ export function VisitForm({
                 <label
                   key={value}
                   className={[
-                    "flex flex-1 cursor-pointer items-center justify-center rounded-md border px-4 py-2.5 text-base",
+                    "flex flex-1 cursor-pointer items-center justify-center rounded-md border px-4 py-2.5 text-base transition-colors",
                     mode === value
                       ? "border-accent bg-accent-soft font-medium text-accent-strong"
                       : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50",
@@ -265,7 +274,7 @@ export function VisitForm({
                 <select
                   id="payment_method"
                   name="payment_method"
-                  defaultValue="cash"
+                  defaultValue={defaultPaymentMethod}
                   className={inputClass}
                   {...invalid("payment_method")}
                 >
@@ -279,6 +288,11 @@ export function VisitForm({
                 />
               </div>
             </div>
+            {paymentNote ? (
+              <p className="mt-3 rounded-md bg-accent-soft/60 px-3 py-2 text-sm text-accent-strong">
+                {paymentNote}
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -294,7 +308,7 @@ export function VisitForm({
                     onClick={() => setNextVisit(active ? "" : target)}
                     aria-pressed={active}
                     className={[
-                      "rounded-md border px-4 py-2.5 text-base",
+                      "rounded-md border px-4 py-2.5 text-base transition-colors",
                       active
                         ? "border-accent bg-accent-soft font-medium text-accent-strong"
                         : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50",

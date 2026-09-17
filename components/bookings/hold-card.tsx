@@ -5,6 +5,7 @@ import { displayBD } from "@/lib/phone";
 import { formatDate } from "@/lib/dates";
 import { Countdown } from "@/components/dashboard/countdown";
 import { buttonSecondaryClass, cardClass } from "@/components/ui/styles";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const SOURCE: Record<string, string> = {
   open_link: "public link",
@@ -40,9 +41,9 @@ export function HoldCard({ hold }: { hold: HoldRow }) {
         </p>
         <form action={releaseHold}>
           <input type="hidden" name="appointment_id" value={hold.id} />
-          <button type="submit" className={buttonSecondaryClass}>
+          <SubmitButton pendingText="Releasing…" className={buttonSecondaryClass}>
             Release
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </li>

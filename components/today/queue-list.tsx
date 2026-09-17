@@ -10,24 +10,30 @@ export function QueueList({
   rows,
   emptyText,
   showWhatsApp,
+  action,
 }: {
   title: string;
   rows: QueueRow[];
   emptyText: string;
   showWhatsApp: boolean;
+  /** Optional link or hint shown on the right of the heading. */
+  action?: React.ReactNode;
 }) {
   const remaining = rows.filter((r) => r.status !== "completed").length;
 
   return (
     <section>
-      <h2 className="mb-3 flex items-baseline gap-2 text-lg font-semibold text-neutral-900">
-        {title}
-        {rows.length ? (
-          <span className="text-base font-normal text-neutral-500">
-            {remaining} of {rows.length} remaining
-          </span>
-        ) : null}
-      </h2>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="flex items-baseline gap-2 text-lg font-semibold text-neutral-900">
+          {title}
+          {rows.length ? (
+            <span className="text-base font-normal text-neutral-500">
+              {remaining} of {rows.length} remaining
+            </span>
+          ) : null}
+        </h2>
+        {action ? <div className="text-sm text-neutral-600">{action}</div> : null}
+      </div>
 
       {rows.length === 0 ? (
         <div className={`${cardClass} p-8 text-center`}>
@@ -92,7 +98,7 @@ export function QueueList({
                       href={wa}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white hover:bg-accent-strong"
+                      className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-accent-strong"
                     >
                       WhatsApp
                     </a>
@@ -107,7 +113,7 @@ export function QueueList({
                   ) : (
                     <Link
                       href={`/patients/${r.patient.id}/visit/new?appointment=${r.id}`}
-                      className="inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-4 py-2.5 text-base font-medium text-neutral-800 hover:bg-neutral-50"
+                      className="inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-4 py-2.5 text-base font-medium text-neutral-800 transition-colors hover:bg-neutral-50"
                     >
                       Start visit
                     </Link>

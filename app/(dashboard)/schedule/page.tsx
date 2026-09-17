@@ -92,7 +92,8 @@ export default async function SchedulePage({
         <BulkOpenForm />
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      {/* The calendar takes the full width; the day panel sits beside it only on a wide screen. */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:items-start">
         <div>
           <MonthGrid
             y={y}
@@ -101,23 +102,24 @@ export default async function SchedulePage({
             selected={selected}
             overview={overview}
           />
-          <p className="mt-3 text-sm text-neutral-500">
-            <span className="mr-4 inline-flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-6 rounded-full bg-accent" /> video bookings against capacity
+          <p className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-neutral-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2 w-7 rounded-full bg-accent" /> video bookings
+              against capacity
             </span>
-            <span className="mr-4 inline-flex items-center gap-1.5">
-              <span className="rounded-full bg-accent-soft px-1.5 text-[10px] font-semibold uppercase text-accent-strong">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent-strong">
                 Open
               </span>
               new patients may book
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="rounded-full bg-red-100 px-1.5 text-[10px] font-semibold uppercase text-red-700">
+              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700">
                 Off
               </span>
               cancelled
             </span>
-            <span className="ml-4 inline-block">Click any day to open or edit it.</span>
+            <span>Click any day to open or edit it.</span>
           </p>
         </div>
 

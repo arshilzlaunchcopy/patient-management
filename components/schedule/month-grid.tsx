@@ -26,6 +26,9 @@ export function gridEnd(y: number, m1: number): string {
  * a teal bar with the video count against capacity, an "Open" tag when new
  * patients may book it, red when cancelled. Days with nothing on them stay
  * quiet so the eye goes to the days that matter.
+ *
+ * Cells are tall and the numbers large on purpose: this is read at arm's
+ * length on a laptop between patients.
  */
 export function MonthGrid({
   y,
@@ -53,7 +56,7 @@ export function MonthGrid({
         {DAY_HEADERS.map((h, i) => (
           <div
             key={h}
-            className={`px-2 py-2 text-center text-xs font-medium uppercase tracking-wide ${
+            className={`px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wide md:text-sm ${
               i === 6 ? "text-neutral-400" : "text-neutral-600"
             }`}
           >
@@ -88,12 +91,12 @@ export function MonthGrid({
           return (
             <Link
               key={date}
-              href={`/schedule?month=${monthPrefix}&day=${date}`}
+              href={`/schedule?month=${monthPrefix}&day=${date}#day`}
               title={title}
               aria-label={title}
               aria-current={isSelected ? "true" : undefined}
               className={[
-                "flex min-h-[4.75rem] flex-col gap-1 border-b border-r border-neutral-100 p-1.5 text-left md:min-h-[6rem] md:p-2",
+                "flex min-h-[5.25rem] flex-col gap-1 border-b border-r border-neutral-100 p-1.5 text-left transition-colors md:min-h-[7.5rem] md:p-2.5",
                 isFriday ? "border-r-0" : "",
                 inMonth ? (isFriday ? "bg-neutral-50/70" : "bg-white") : "bg-neutral-50/60",
                 cancelled ? "bg-red-50/60" : "",
@@ -103,7 +106,7 @@ export function MonthGrid({
               <div className="flex items-start justify-between gap-1">
                 <span
                   className={[
-                    "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm tabular-nums",
+                    "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-base tabular-nums md:h-8 md:min-w-8 md:text-lg",
                     isToday
                       ? "bg-accent font-semibold text-white"
                       : inMonth
@@ -117,12 +120,12 @@ export function MonthGrid({
                   {Number(date.slice(8, 10))}
                 </span>
                 {day && !cancelled && day.is_open_for_new ? (
-                  <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-accent-strong">
+                  <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-accent-strong md:text-[11px]">
                     Open
                   </span>
                 ) : null}
                 {cancelled ? (
-                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-red-700">
+                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-red-700 md:text-[11px]">
                     Off
                   </span>
                 ) : null}
@@ -130,14 +133,14 @@ export function MonthGrid({
 
               {day && !cancelled ? (
                 <div className="mt-auto">
-                  <div className="flex items-baseline justify-between text-xs tabular-nums">
-                    <span className={`font-medium ${full ? "text-amber-700" : "text-neutral-800"}`}>
+                  <div className="flex items-baseline justify-between text-xs tabular-nums md:text-sm">
+                    <span className={`font-semibold ${full ? "text-amber-700" : "text-neutral-800"}`}>
                       {video}
-                      {cap ? <span className="text-neutral-400">/{cap}</span> : null}
+                      {cap ? <span className="font-normal text-neutral-400">/{cap}</span> : null}
                     </span>
-                    <span className="hidden text-neutral-400 md:inline">video</span>
+                    <span className="hidden text-neutral-400 md:inline">{full ? "full" : "video"}</span>
                   </div>
-                  <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-neutral-100">
                     <div
                       className={`h-full rounded-full ${full ? "bg-amber-500" : "bg-accent"}`}
                       style={{ width: `${fill}%` }}
@@ -147,7 +150,7 @@ export function MonthGrid({
               ) : null}
 
               {walkIn ? (
-                <span className="text-xs tabular-nums text-neutral-600">
+                <span className="text-xs tabular-nums text-neutral-600 md:text-sm">
                   {walkIn} <span className="hidden md:inline">walk-in</span>
                   <span className="md:hidden">w</span>
                 </span>

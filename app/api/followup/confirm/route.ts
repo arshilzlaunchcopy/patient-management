@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getToken, isExpired, markTokenUsed } from "@/lib/booking/tokens";
+import { getToken, hasUsesLeft, isExpired, markTokenUsed } from "@/lib/booking/tokens";
 import { createHold, findLiveAppointment, findPaymentToken } from "@/lib/booking/holds";
 import { getDayAvailability, sweepExpiredHolds } from "@/lib/availability";
 import { ensureConsultDay } from "@/lib/schedule/ensure";
@@ -8,8 +8,10 @@ import { getSettings, settingInt } from "@/lib/settings";
 import { todayDhaka } from "@/lib/dates";
 
 /**
- * Flow B, step 1 → payment. The follow-up token is single-use: it is
- * consumed here, and the patient continues on a fresh payment token.
+ * Flow B, step 1 → payment. The follow-up token stays valid for a limited
+ * number of opens (see MAX_FOLLOWUP_LINK_USES) so a patient whose hold
+ * expired unpaid can come back through the same SMS and try again. The
+ * patient continues on a fresh payment token either way.
  */
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
       !t.patient_id ||
       !t.target_date ||
       isExpired(t) ||
-      t.used_at ||
+      !hasUsesLeft(t) ||
       t.target_date < todayDhaka()
     ) {
       // The page renders the expired-link state for any of these.
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
       feeAmount: settingInt(settings.video_fee, 500),
       holdMinutes: settingInt(settings.hold_minutes, 30),
     });
+    // Records the first time the link led to a hold; it does not lock the link.
     await markTokenUsed(supabase, token);
 
     return NextResponse.redirect(new URL(`/b/pay/${paymentToken}`, request.url), 303);

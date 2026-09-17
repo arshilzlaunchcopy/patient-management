@@ -5,6 +5,7 @@ import { displayBD } from "@/lib/phone";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { StatusBadge } from "@/components/schedule/status";
 import { buttonPrimaryClass, buttonSecondaryClass, cardClass } from "@/components/ui/styles";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MergePicker } from "./merge-picker";
 
 export function PendingCard({
@@ -50,9 +51,9 @@ export function PendingCard({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <form action={acceptPatient}>
           <input type="hidden" name="patient_id" value={patient.id} />
-          <button type="submit" className={buttonPrimaryClass}>
+          <SubmitButton pendingText="Accepting…" className={buttonPrimaryClass}>
             Accept as new patient
-          </button>
+          </SubmitButton>
         </form>
         {!merging ? (
           <Link href={`/bookings?tab=new&merge=${patient.id}`} className={buttonSecondaryClass}>

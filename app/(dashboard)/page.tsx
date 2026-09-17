@@ -32,7 +32,7 @@ function Counter({
     </>
   );
   return href ? (
-    <Link href={href} className={`${cardClass} block p-4 hover:bg-neutral-50`}>
+    <Link href={href} className={`${cardClass} block p-4 transition-colors hover:bg-neutral-50`}>
       {body}
     </Link>
   ) : (
@@ -114,7 +114,7 @@ export default async function TodayPage() {
             </p>
             <Link
               href={`/schedule?month=${today.slice(0, 7)}&day=${today}`}
-              className="mt-6 inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white hover:bg-accent-strong"
+              className="mt-6 inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-accent-strong"
             >
               Open today in Schedule
             </Link>
@@ -123,21 +123,23 @@ export default async function TodayPage() {
         </div>
       ) : (
         <div className="space-y-10">
-          {counters.booked > 0 ? (
-            <p className="-mb-4 text-sm text-neutral-600">
-              Running late, or the call window moved?{" "}
-              <Link
-                href={`/messages?segment=booked_on&date=${today}`}
-                className="font-medium text-accent-strong hover:underline"
-              >
-                Message everyone booked today
-              </Link>
-            </p>
-          ) : null}
           <QueueList
             title="Video queue"
             rows={video}
             showWhatsApp
+            action={
+              counters.booked > 0 ? (
+                <>
+                  Running late, or the call window moved?{" "}
+                  <Link
+                    href={`/messages?segment=booked_on&date=${today}`}
+                    className="font-medium text-accent-strong hover:underline"
+                  >
+                    Message everyone booked today
+                  </Link>
+                </>
+              ) : null
+            }
             emptyText={
               day
                 ? "No video bookings yet for today."

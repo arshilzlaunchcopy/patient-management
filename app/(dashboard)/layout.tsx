@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createUserClient } from "@/lib/supabase/server";
 import { checkSchema } from "@/lib/supabase/schema";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { SetupRequired } from "@/components/dashboard/setup-required";
+import { NavigationProgress } from "@/components/dashboard/navigation-progress";
 
 export default async function DashboardLayout({
   children,
@@ -30,9 +32,13 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-neutral-50 md:flex">
+      {/* useSearchParams needs a Suspense boundary; the bar renders nothing until a click. */}
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Sidebar email={email} pendingReviewCount={count ?? 0} />
       <main className="flex-1 px-4 py-6 md:px-10 md:py-10">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-6xl">
           {/* Without the schema every page throws; show instructions once, here, instead. */}
           {schema.ok ? children : <SetupRequired status={schema} />}
         </div>

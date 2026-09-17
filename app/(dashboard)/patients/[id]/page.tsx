@@ -13,6 +13,7 @@ import {
   buttonSecondaryClass,
   cardClass,
 } from "@/components/ui/styles";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -144,13 +145,13 @@ export default async function PatientPage({
             {hasUpcomingFollowup ? (
               <form action={sendFollowupLinkAction}>
                 <input type="hidden" name="patient_id" value={patient.id} />
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="Queuing…"
                   className={buttonSecondaryClass}
                   title={`Queues the reminder SMS for ${formatDate(nextVisit)}`}
                 >
                   Send follow-up link
-                </button>
+                </SubmitButton>
               </form>
             ) : null}
           </div>

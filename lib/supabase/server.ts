@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { retryingFetch } from "./fetch";
 
 /**
  * Server-side Supabase client acting as the signed-in doctor.
@@ -24,6 +25,7 @@ export async function createUserClient() {
   const cookieStore = await cookies();
 
   return createServerClient(url, anonKey, {
+    global: { fetch: retryingFetch },
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -62,5 +64,6 @@ export function createServiceClient() {
 
   return createSupabaseClient(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: retryingFetch },
   });
 }

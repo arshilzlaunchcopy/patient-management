@@ -18,6 +18,7 @@ export const MIGRATIONS = [
   { file: "004_followup_requests.sql", what: "Rate limiting for the lost-link form" },
   { file: "005_reset_demo_data.sql", what: "The “Reset demo data” button on Settings" },
   { file: "006_patient_latest_visits_v2.sql", what: "Patient columns on the latest-visit view, for Messages and the patient filters" },
+  { file: "007_followup_link_uses_and_texts.sql", what: "Reusable follow-up links and a starter set of saved SMS texts" },
 ] as const;
 
 export type MigrationFile = (typeof MIGRATIONS)[number]["file"];
@@ -41,9 +42,10 @@ export type SchemaStatus =
   | { ok: false; missingTable: string; migration: MigrationFile };
 
 /**
- * Three one-row selects, run in parallel: `settings` exists once 001 has
- * run, `followup_requests` once 004 has, and the view's `name` column once
- * 006 has. Reports the first thing that is missing. Any other error
+ * Four one-row selects, run in parallel: `settings` exists once 001 has
+ * run, `followup_requests` once 004 has, the view's `name` column once
+ * 006 has, and `booking_tokens.use_count` once 007 has. Reports the first
+ * thing that is missing. Any other error
  * (network, RLS) is not a setup problem and is ignored here; the page's own
  * query will surface it.
  *
@@ -56,6 +58,7 @@ export async function checkSchema(supabase: SupabaseClient): Promise<SchemaStatu
     { table: "settings", column: "key", migration: "001_initial.sql" },
     { table: "followup_requests", column: "id", migration: "004_followup_requests.sql" },
     { table: "patient_latest_visits", column: "name", migration: "006_patient_latest_visits_v2.sql" },
+    { table: "booking_tokens", column: "use_count", migration: "007_followup_link_uses_and_texts.sql" },
   ];
 
   const results = await Promise.all(

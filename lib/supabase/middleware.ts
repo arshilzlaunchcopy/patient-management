@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { retryingFetch } from "./fetch";
 
 /**
  * Routes that do not require the doctor to be signed in.
@@ -43,6 +44,7 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(url, anonKey, {
+    global: { fetch: retryingFetch },
     cookies: {
       getAll() {
         return request.cookies.getAll();

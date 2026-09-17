@@ -9,7 +9,10 @@
         "dev"
       ],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": "https://xiommhgnuazbgtldovem.supabase.co"
+      }
     }
   ]
 }

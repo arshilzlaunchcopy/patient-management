@@ -1,4 +1,5 @@
 import { signOut } from "@/app/(dashboard)/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { NavLinks } from "./nav-links";
 
 export function Sidebar({
@@ -19,12 +20,12 @@ export function Sidebar({
         </div>
         {/* On a phone sign-out sits up here; on a laptop it is in the sidebar footer. */}
         <form action={signOut} className="md:hidden">
-          <button
-            type="submit"
-            className="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+          <SubmitButton
+            pendingText="Signing out…"
+            className="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 disabled:opacity-60"
           >
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -35,12 +36,12 @@ export function Sidebar({
           {email}
         </p>
         <form action={signOut} className="mt-2">
-          <button
-            type="submit"
-            className="text-sm font-medium text-neutral-700 hover:text-accent-strong"
+          <SubmitButton
+            pendingText="Signing out…"
+            className="flex items-center text-sm font-medium text-neutral-700 transition-colors hover:text-accent-strong disabled:opacity-60"
           >
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </aside>

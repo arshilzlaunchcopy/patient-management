@@ -12,11 +12,16 @@ import { analyzeSms, MAX_CAMPAIGN_SEGMENTS } from "@/lib/sms/segments";
 import { buttonPrimaryClass, inputClass, labelClass } from "@/components/ui/styles";
 
 const DEFAULT_BODY = "প্রিয় রোগী, ";
+const PLACEHOLDER_RE = /\{\{\s*(\w+)\s*\}\}/g;
 
 export interface SavedText {
   id: string;
   name: string;
   body: string;
+  /** Written by the doctor (deletable) rather than one of the automatic texts. */
+  custom: boolean;
+  /** Placeholders the automatic texts carry, e.g. ["date", "link"]. */
+  variables: string[];
 }
 
 /** Written the way the doctor already writes money: no decimals unless needed. */
@@ -24,8 +29,53 @@ function taka(n: number): string {
   return `৳${Number.isInteger(n) ? n : n.toFixed(2)}`;
 }
 
-const chipClass =
-  "inline-flex max-w-full items-center gap-1 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-800 hover:border-accent hover:bg-accent-soft";
+/** Fill the placeholders we know a value for; leave the rest for the doctor to edit. */
+function applyFills(body: string, fills: Record<string, string>): string {
+  return body.replace(PLACEHOLDER_RE, (match, key: string) => fills[key] || match);
+}
+
+function unfilledPlaceholders(body: string): string[] {
+  return Array.from(body.matchAll(PLACEHOLDER_RE), (m) => m[0]);
+}
+
+function TextCard({
+  t,
+  onUse,
+  onDelete,
+  busy,
+}: {
+  t: SavedText;
+  onUse: () => void;
+  onDelete?: () => void;
+  busy: boolean;
+}) {
+  return (
+    <li className="relative">
+      <button
+        type="button"
+        onClick={onUse}
+        className="block w-full rounded-md border border-neutral-200 bg-white p-3 pr-9 text-left transition-colors hover:border-accent hover:bg-accent-soft/40 focus:outline-none focus:ring-2 focus:ring-accent/30"
+      >
+        <span className="block truncate text-sm font-medium text-neutral-900">{t.name}</span>
+        <span className="mt-1 line-clamp-2 block text-sm leading-relaxed text-neutral-600" lang="bn">
+          {t.body}
+        </span>
+      </button>
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={busy}
+          aria-label={`Delete saved text ${t.name}`}
+          title="Delete"
+          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-700"
+        >
+          ×
+        </button>
+      ) : null}
+    </li>
+  );
+}
 
 export function ComposeForm({
   hidden,
@@ -34,6 +84,7 @@ export function ComposeForm({
   pricePerSegment,
   templates,
   initialBody,
+  fills = {},
 }: {
   /** Segment parameters echoed back so the server re-resolves the same audience. */
   hidden: Record<string, string>;
@@ -43,6 +94,8 @@ export function ComposeForm({
   templates: SavedText[];
   /** Pre-filled text, e.g. from the schedule's "notify patients" link. */
   initialBody?: string;
+  /** Values for placeholders in the automatic texts that this audience already fixes, e.g. the date. */
+  fills?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState<SendState, FormData>(sendCampaign, {});
   const [body, setBody] = useState(initialBody?.trim() ? initialBody : DEFAULT_BODY);
@@ -57,7 +110,17 @@ export function ComposeForm({
   const cost = totalSegments * pricePerSegment;
   const tooLong = a.segments > MAX_CAMPAIGN_SEGMENTS;
   const empty = body.trim().length === 0;
-  const canSend = recipientCount > 0 && !empty && !tooLong && !pending;
+  const unfilled = unfilledPlaceholders(body);
+  const canSend = recipientCount > 0 && !empty && !tooLong && unfilled.length === 0 && !pending;
+
+  const own = templates.filter((t) => t.custom);
+  const automatic = templates.filter((t) => !t.custom);
+
+  function insertText(t: SavedText) {
+    setBody(applyFills(t.body, fills));
+    setTemplateNote(null);
+    document.getElementById("body")?.focus();
+  }
 
   function saveTemplate() {
     startTemplate(async () => {
@@ -86,7 +149,8 @@ export function ComposeForm({
           {state.failed ? `, ${state.failed} could not be queued` : ""}.
         </p>
         <p className="mt-1 text-sm">
-          No SMS gateway is connected yet, so messages stay queued in the Outbox until one is.
+          Messages go out through the SMS gateway; the Outbox shows what was sent and what is still
+          waiting.
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-sm font-medium">
           <Link href={`/outbox?campaign=${state.campaignId}`} className="underline">
@@ -104,38 +168,45 @@ export function ComposeForm({
     <div className="space-y-5">
       <div>
         <p className={labelClass}>Saved texts</p>
-        {templates.length === 0 ? (
-          <p className="mt-1 text-sm text-neutral-500">
-            None yet. Write a message below and press “Save this text” to reuse it later.
+        <p className="mt-0.5 text-sm text-neutral-500">Tap one to put it in the message box, then edit if you like.</p>
+        {own.length === 0 ? (
+          <p className="mt-2 text-sm text-neutral-500">
+            None of your own yet. Write a message below and press “Save this text” to reuse it later.
           </p>
         ) : (
-          <ul className="mt-1.5 flex flex-wrap gap-2">
-            {templates.map((t) => (
-              <li key={t.id} className="flex max-w-full items-center">
-                <button
-                  type="button"
-                  onClick={() => setBody(t.body)}
-                  title={t.body}
-                  className={`${chipClass} rounded-r-none border-r-0`}
-                >
-                  <span className="truncate">{t.name}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeTemplate(t)}
-                  disabled={templateBusy}
-                  aria-label={`Delete saved text ${t.name}`}
-                  title="Delete"
-                  className={`${chipClass} rounded-l-none px-2 text-neutral-500 hover:text-red-700`}
-                >
-                  ×
-                </button>
-              </li>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+            {own.map((t) => (
+              <TextCard
+                key={t.id}
+                t={t}
+                busy={templateBusy}
+                onUse={() => insertText(t)}
+                onDelete={() => removeTemplate(t)}
+              />
             ))}
           </ul>
         )}
+
+        {automatic.length > 0 ? (
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm font-medium text-accent-strong hover:underline">
+              Automatic texts ({automatic.length})
+            </summary>
+            <p className="mt-1 text-sm text-neutral-500">
+              The texts the system sends on its own. Parts like{" "}
+              <code className="rounded bg-neutral-100 px-1 font-mono text-xs">{"{{date}}"}</code> are
+              filled in when the audience fixes them; anything left must be edited before sending.
+            </p>
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+              {automatic.map((t) => (
+                <TextCard key={t.id} t={t} busy={templateBusy} onUse={() => insertText(t)} />
+              ))}
+            </ul>
+          </details>
+        ) : null}
+
         {templateNote ? (
-          <p className="mt-1.5 text-sm text-neutral-600" aria-live="polite">
+          <p className="mt-2 text-sm text-neutral-600" aria-live="polite">
             {templateNote}
           </p>
         ) : null}
@@ -186,8 +257,8 @@ export function ComposeForm({
             rows={6}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            aria-invalid={tooLong || undefined}
-            className="mt-1.5 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-lg leading-relaxed text-neutral-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 aria-[invalid=true]:border-red-500"
+            aria-invalid={tooLong || unfilled.length > 0 || undefined}
+            className="mt-1.5 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-lg leading-relaxed text-neutral-900 transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 aria-[invalid=true]:border-red-500"
           />
           <p className={`mt-1 text-sm ${tooLong ? "text-red-700" : "text-neutral-500"}`}>
             {a.length} of {capacity} characters · {a.segments} {a.segments === 1 ? "segment" : "segments"} per
@@ -195,6 +266,11 @@ export function ComposeForm({
             {a.encoding === "ucs2" ? " · Bangla text fits 70 characters in one segment" : ""}
             {tooLong ? ` · keep it to ${MAX_CAMPAIGN_SEGMENTS} segments or fewer` : ""}
           </p>
+          {unfilled.length > 0 ? (
+            <p className="mt-1 text-sm text-amber-800">
+              Replace {unfilled.join(", ")} with the real text before sending.
+            </p>
+          ) : null}
 
           {saveOpen ? (
             <div className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">

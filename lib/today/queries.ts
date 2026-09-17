@@ -1,5 +1,6 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
+import { withRetry } from "@/lib/supabase/retry";
 import type { AppointmentStatus, ConsultDay, VisitMode } from "@/lib/types";
 
 /** Statuses shown in today's queues. Holds are not yet paid, so excluded. */
@@ -33,7 +34,16 @@ export interface TodayData {
   viewMissing: boolean;
 }
 
-export async function getTodayData(today: string): Promise<TodayData> {
+/**
+ * Everything the Today page shows. This is the first page after sign-in and
+ * the one a cold function hits hardest, so a transient failure is retried
+ * once before it becomes an error screen.
+ */
+export function getTodayData(today: string): Promise<TodayData> {
+  return withRetry(() => loadTodayData(today));
+}
+
+async function loadTodayData(today: string): Promise<TodayData> {
   const supabase = await createUserClient();
 
   const [dayRes, apptsRes, seenRes, awaitingRes, overdueRes] = await Promise.all([

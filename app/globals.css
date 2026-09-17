@@ -16,3 +16,27 @@ body {
   background: #ffffff;
   color: #171717;
 }
+
+/* Dashboard page-load bar: creeps to 90% and waits for the page to land. */
+@keyframes nav-progress {
+  0% {
+    width: 0;
+  }
+  30% {
+    width: 55%;
+  }
+  100% {
+    width: 90%;
+  }
+}
+
+.nav-progress-active {
+  animation: nav-progress 8s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-active {
+    animation: none;
+    width: 90%;
+  }
+}

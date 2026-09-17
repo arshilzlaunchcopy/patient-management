@@ -22,12 +22,14 @@ export function CustomAudience({
   pricePerSegment,
   templates,
   initialBody,
+  fills,
 }: {
   /** The audience dropdown, rendered by the page so it can stay a shared component. */
   picker: React.ReactNode;
   pricePerSegment: number;
   templates: SavedText[];
   initialBody?: string;
+  fills?: Record<string, string>;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PickerPatient[]>([]);
@@ -195,6 +197,7 @@ export function CustomAudience({
           pricePerSegment={pricePerSegment}
           templates={templates}
           initialBody={initialBody}
+          fills={fills}
         />
       </section>
     </div>

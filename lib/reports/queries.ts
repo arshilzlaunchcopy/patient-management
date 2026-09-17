@@ -62,6 +62,8 @@ export interface Report {
   chamber: number;
   byPayment: { cash: number; bkash: number; free: number };
   revenueByPayment: { cash: number; bkash: number; free: number };
+  /** Visits counted as bKash because their booking was paid online, whatever the form said. */
+  onlinePaidVisits: number;
   newPatients: { walk_in: number; online_booking: number };
   bookingsBySource: { doctor: number; open_link: number; followup_link: number };
   onlineBookingsPending: number;
@@ -71,6 +73,7 @@ export interface Report {
 
 const PAGE = 1000;
 const MAX_ROWS = 20000;
+const IN_CHUNK = 200;
 
 type Row = Record<string, unknown>;
 type PageResult = PromiseLike<{ data: unknown; error: { message: string } | null }>;
@@ -101,7 +104,7 @@ export async function getReport(from: string, to: string): Promise<Report> {
     paged("report visits", (a, b) =>
       supabase
         .from("visits")
-        .select("visit_date, mode, fee_charged, payment_method, patient_id, diagnosis")
+        .select("visit_date, mode, fee_charged, payment_method, patient_id, diagnosis, appointment_id")
         .gte("visit_date", from)
         .lte("visit_date", to)
         .order("visit_date", { ascending: true })
@@ -126,6 +129,23 @@ export async function getReport(from: string, to: string): Promise<Report> {
     ),
   ]);
 
+  // A visit that closed an online booking was paid by bKash before the
+  // call, whatever the visit form defaulted to. Look those bookings up so
+  // the payment split reflects where the money actually came from.
+  const linkedIds = Array.from(
+    new Set(visits.map((v) => v.appointment_id).filter((id): id is string => typeof id === "string")),
+  );
+  const onlineAppointments = new Set<string>();
+  for (let i = 0; i < linkedIds.length; i += IN_CHUNK) {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("id")
+      .in("id", linkedIds.slice(i, i + IN_CHUNK))
+      .neq("booking_source", "doctor");
+    if (error) throw new Error(`report online bookings: ${error.message}`);
+    for (const a of (data ?? []) as { id: string }[]) onlineAppointments.add(a.id);
+  }
+
   const r: Report = {
     from,
     to,
@@ -136,6 +156,7 @@ export async function getReport(from: string, to: string): Promise<Report> {
     chamber: 0,
     byPayment: { cash: 0, bkash: 0, free: 0 },
     revenueByPayment: { cash: 0, bkash: 0, free: 0 },
+    onlinePaidVisits: 0,
     newPatients: { walk_in: 0, online_booking: 0 },
     bookingsBySource: { doctor: 0, open_link: 0, followup_link: 0 },
     onlineBookingsPending: 0,
@@ -169,7 +190,13 @@ export async function getReport(from: string, to: string): Promise<Report> {
       m.chamber += 1;
     }
 
-    const pm = v.payment_method as keyof Report["byPayment"] | null;
+    let pm = v.payment_method as keyof Report["byPayment"] | null;
+    const paidOnline =
+      typeof v.appointment_id === "string" && onlineAppointments.has(v.appointment_id);
+    if (paidOnline && (pm === null || pm === "cash")) {
+      pm = "bkash";
+      r.onlinePaidVisits += 1;
+    }
     if (pm && pm in r.byPayment) {
       r.byPayment[pm] += 1;
       r.revenueByPayment[pm] += fee;

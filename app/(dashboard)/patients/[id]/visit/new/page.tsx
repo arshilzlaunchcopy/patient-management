@@ -49,6 +49,10 @@ export default async function NewVisitPage({
       ? appointment
       : null;
 
+  // Online bookings are paid through bKash before the call, so the visit
+  // starts with that method and amount instead of the cash default.
+  const paidOnline = !!linked && linked.booking_source !== "doctor";
+
   const previous = visits[0] ?? null;
   const action = createVisit.bind(null, patient.id, linked?.id ?? null);
 
@@ -124,6 +128,9 @@ export default async function NewVisitPage({
         patientId={patient.id}
         defaultDate={linked?.scheduled_date ?? todayDhaka()}
         defaultMode={linked?.mode ?? "in_person"}
+        defaultPaymentMethod={paidOnline ? "bkash" : "cash"}
+        defaultFee={paidOnline ? linked.fee_amount : null}
+        paymentNote={paidOnline ? "Booked and paid online through bKash." : undefined}
         fees={fees}
         cancelHref={`/patients/${patient.id}`}
       />

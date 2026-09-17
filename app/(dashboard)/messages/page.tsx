@@ -12,6 +12,7 @@ import {
 import { isCustomTemplate, listCampaigns, listTemplates } from "@/lib/messages/queries";
 import { getSettings, settingNumber } from "@/lib/settings";
 import { formatDateTime } from "@/lib/dates";
+import { formatDateLongBn } from "@/lib/i18n/format";
 import { displayBD } from "@/lib/phone";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AudiencePicker } from "@/components/messages/audience-picker";
@@ -40,14 +41,28 @@ export default async function MessagesPage({
 
   const [recipients, settings, campaigns, allTemplates] = await Promise.all([
     resolveRecipients(supabase, filter),
-    getSettings(["sms_price_per_segment"] as const),
+    getSettings(["sms_price_per_segment", "whatsapp_number"] as const),
     listCampaigns(),
     listTemplates(),
   ]);
-  // Automatic templates carry {{placeholders}} the bulk sender cannot fill; only plain texts are offered.
+  // Every active text is offered: the doctor's own first, then the automatic
+  // ones (whose placeholders are filled where the audience fixes them).
   const templates = allTemplates
-    .filter((t) => t.is_active && t.variables.length === 0)
-    .map((t) => ({ id: t.id, name: t.label_en, body: t.body_bn, custom: isCustomTemplate(t.key) }));
+    .filter((t) => t.is_active)
+    .map((t) => ({
+      id: t.id,
+      name: t.label_en,
+      body: t.body_bn,
+      custom: isCustomTemplate(t.key),
+      variables: t.variables,
+    }));
+  const fills: Record<string, string> = {};
+  if (filter.date) fills.date = formatDateLongBn(filter.date);
+  const contact = settings.whatsapp_number && !/X/i.test(settings.whatsapp_number)
+    ? displayBD(settings.whatsapp_number)
+    : "";
+  if (contact) fills.contact = contact;
+
   const initialBody = (sp.text ?? "").slice(0, 1000);
   const price = settingNumber(settings.sms_price_per_segment, 0.3);
   const audienceLabel = describeSegment(
@@ -88,6 +103,7 @@ export default async function MessagesPage({
           pricePerSegment={price}
           templates={templates}
           initialBody={initialBody}
+          fills={fills}
         />
       ) : (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
@@ -147,6 +163,7 @@ export default async function MessagesPage({
             pricePerSegment={price}
             templates={templates}
             initialBody={initialBody}
+            fills={fills}
           />
         </section>
       </div>

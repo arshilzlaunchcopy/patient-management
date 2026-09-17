@@ -184,7 +184,11 @@ export default async function ReportsPage({
           title="Revenue by payment method"
           rows={[
             { label: "Cash at the chamber", value: r.revenueByPayment.cash, hint: `${r.byPayment.cash} visits` },
-            { label: "bKash", value: r.revenueByPayment.bkash, hint: `${r.byPayment.bkash} visits` },
+            {
+              label: "bKash",
+              value: r.revenueByPayment.bkash,
+              hint: `${r.byPayment.bkash} visits${r.onlinePaidVisits ? `, ${r.onlinePaidVisits} paid online when booking` : ""}`,
+            },
             { label: "Free", value: r.revenueByPayment.free, hint: `${r.byPayment.free} visits` },
           ]}
           format={taka}

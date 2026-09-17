@@ -3,7 +3,14 @@ import type { ClaimRow, MergeCandidate } from "@/lib/bookings/queries";
 import { rejectClaim, verifyClaim } from "@/lib/bookings/actions";
 import { displayBD, waLink } from "@/lib/phone";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import { buttonPrimaryClass, buttonSecondaryClass, cardClass, inputClass } from "@/components/ui/styles";
+import {
+  buttonDangerClass,
+  buttonPrimaryClass,
+  buttonSecondaryClass,
+  cardClass,
+  inputClass,
+} from "@/components/ui/styles";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { MergePicker } from "./merge-picker";
 
 export function ClaimCard({
@@ -93,9 +100,9 @@ export function ClaimCard({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <form action={verifyClaim}>
           <input type="hidden" name="claim_id" value={claim.id} />
-          <button type="submit" className={buttonPrimaryClass}>
+          <SubmitButton pendingText="Verifying…" className={buttonPrimaryClass}>
             Verify
-          </button>
+          </SubmitButton>
         </form>
 
         <details className="group">
@@ -110,12 +117,9 @@ export function ClaimCard({
               </label>
               <input id={`note-${claim.id}`} name="note" type="text" maxLength={200} className={inputClass} />
             </div>
-            <button
-              type="submit"
-              className="rounded-md bg-red-700 px-4 py-2.5 text-base font-medium text-white hover:bg-red-800"
-            >
+            <SubmitButton pendingText="Rejecting…" className={buttonDangerClass}>
               Reject and ask again
-            </button>
+            </SubmitButton>
           </form>
         </details>
 

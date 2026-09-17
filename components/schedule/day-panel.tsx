@@ -6,6 +6,7 @@ import { saveConsultDay, setDayCancelled } from "@/lib/schedule/actions";
 import { ConsultDayForm } from "./consult-day-form";
 import { LIVE_STATUSES, StatusBadge } from "./status";
 import { buttonSecondaryClass, cardClass } from "@/components/ui/styles";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { bn } from "@/lib/i18n/bn";
 import { formatDateLongBn } from "@/lib/i18n/format";
 
@@ -25,7 +26,11 @@ export function DayPanel({
   const affected = bookings.filter((b) => LIVE_STATUSES.includes(b.status));
 
   return (
-    <aside className={`${cardClass} p-5`} aria-label={`Details for ${formatDate(date)}`}>
+    <aside
+      id="day"
+      className={`${cardClass} scroll-mt-4 p-5`}
+      aria-label={`Details for ${formatDate(date)}`}
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">{formatDate(date)}</h2>
@@ -41,7 +46,7 @@ export function DayPanel({
         <Link
           href={closeHref}
           aria-label="Close"
-          className="rounded-md px-2 py-1 text-xl leading-none text-neutral-500 hover:bg-neutral-100"
+          className="rounded-md px-2 py-1 text-xl leading-none text-neutral-500 transition-colors hover:bg-neutral-100"
         >
           ×
         </Link>
@@ -68,7 +73,7 @@ export function DayPanel({
                 href={`/messages?segment=booked_on&date=${date}&text=${encodeURIComponent(
                   bn.smsDayCancelled(formatDateLongBn(date)),
                 )}`}
-                className="mt-3 inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100"
+                className="mt-3 inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-100"
               >
                 Notify them by SMS
               </Link>
@@ -79,9 +84,12 @@ export function DayPanel({
           <form action={setDayCancelled} className="mt-3">
             <input type="hidden" name="date" value={date} />
             <input type="hidden" name="cancelled" value="false" />
-            <button type="submit" className="text-sm font-medium text-red-800 underline">
+            <SubmitButton
+              pendingText="Restoring…"
+              className="flex items-center text-sm font-medium text-red-800 underline disabled:opacity-60"
+            >
               Undo cancellation
-            </button>
+            </SubmitButton>
           </form>
         </div>
       ) : null}
@@ -159,7 +167,7 @@ export function DayPanel({
                       href={wa}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                      className="shrink-0 rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
                     >
                       WhatsApp
                     </a>
@@ -175,12 +183,12 @@ export function DayPanel({
         <form action={setDayCancelled} className="mt-6 border-t border-neutral-200 pt-4">
           <input type="hidden" name="date" value={date} />
           <input type="hidden" name="cancelled" value="true" />
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="Cancelling…"
             className={`${buttonSecondaryClass} border-red-200 text-red-700 hover:bg-red-50`}
           >
             Cancel this day
-          </button>
+          </SubmitButton>
           <p className="mt-2 text-sm text-neutral-500">
             Can be undone. Bookings are kept so you can contact patients.
           </p>
