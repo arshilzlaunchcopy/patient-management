@@ -106,3 +106,19 @@ export interface Visit {
   next_visit_date: string | null;
   created_at: string;
 }
+
+/** One brand as sold in Bangladesh (migration 009). */
+export interface Medicine {
+  id: number;
+  brand_id: number | null;
+  brand_name: string;
+  type: string | null;
+  dosage_form: string | null;
+  generic: string | null;
+  strength: string | null;
+  manufacturer: string | null;
+  package_container: string | null;
+  pack_size: string | null;
+  source: "medex" | "doctor";
+  created_at: string;
+}

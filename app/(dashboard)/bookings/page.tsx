@@ -5,10 +5,13 @@ import {
   listClaims,
   listHolds,
   listPendingPatients,
+  listVerifiedClaims,
+  VERIFIED_LIMIT,
 } from "@/lib/bookings/queries";
 import { ClaimCard } from "@/components/bookings/claim-card";
 import { PendingCard } from "@/components/bookings/pending-card";
 import { HoldCard } from "@/components/bookings/hold-card";
+import { VerifiedList } from "@/components/bookings/verified-list";
 import { cardClass } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Bookings" };
@@ -17,6 +20,7 @@ const TABS = [
   { key: "verify", label: "Needs verification" },
   { key: "new", label: "New patients" },
   { key: "holds", label: "Holds" },
+  { key: "verified", label: "Verified payments" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -49,14 +53,16 @@ export default async function BookingsPage({
   const q = (sp.q ?? "").trim();
   const message = sp.msg ? MESSAGES[sp.msg] : undefined;
 
-  const [claims, pending, holds] = await Promise.all([
+  const [claims, pending, holds, verified] = await Promise.all([
     listClaims(),
     listPendingPatients(),
     listHolds(),
+    tab === "verified" ? listVerifiedClaims() : Promise.resolve([]),
   ]);
   const candidates = merge && q ? await findMergeCandidates(q, merge) : [];
 
-  const counts: Record<Tab, number> = {
+  // Counts are work waiting; the verified tab is a record, so it shows none.
+  const counts: Partial<Record<Tab, number>> = {
     verify: claims.length,
     new: pending.length,
     holds: holds.length,
@@ -71,29 +77,33 @@ export default async function BookingsPage({
         </p>
       </header>
 
-      <nav aria-label="Booking tabs" className="mb-6 flex gap-1 border-b border-neutral-200">
+      <nav
+        aria-label="Booking tabs"
+        className="-mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 md:mx-0 md:px-0"
+      >
         {TABS.map((t) => {
           const active = t.key === tab;
+          const count = counts[t.key] ?? 0;
           return (
             <Link
               key={t.key}
               href={`/bookings?tab=${t.key}`}
               aria-current={active ? "page" : undefined}
               className={[
-                "-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-base",
+                "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-base transition-colors md:px-4",
                 active
                   ? "border-accent font-medium text-accent-strong"
                   : "border-transparent text-neutral-600 hover:text-neutral-900",
               ].join(" ")}
             >
               {t.label}
-              {counts[t.key] > 0 ? (
+              {count > 0 ? (
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                     active ? "bg-accent text-white" : "bg-neutral-200 text-neutral-700"
                   }`}
                 >
-                  {counts[t.key]}
+                  {count}
                 </span>
               ) : null}
             </Link>
@@ -146,14 +156,20 @@ export default async function BookingsPage({
             ))}
           </ul>
         )
-      ) : holds.length === 0 ? (
-        <Empty>No live holds. A hold appears while a patient is on the payment page.</Empty>
+      ) : tab === "holds" ? (
+        holds.length === 0 ? (
+          <Empty>No live holds. A hold appears while a patient is on the payment page.</Empty>
+        ) : (
+          <ul className="space-y-3">
+            {holds.map((h) => (
+              <HoldCard key={h.id} hold={h} />
+            ))}
+          </ul>
+        )
+      ) : verified.length === 0 ? (
+        <Empty>No verified online payments yet. Each one you verify is kept here with its patient.</Empty>
       ) : (
-        <ul className="space-y-3">
-          {holds.map((h) => (
-            <HoldCard key={h.id} hold={h} />
-          ))}
-        </ul>
+        <VerifiedList rows={verified} limit={VERIFIED_LIMIT} />
       )}
     </>
   );

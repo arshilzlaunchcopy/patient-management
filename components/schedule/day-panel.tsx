@@ -4,6 +4,7 @@ import { displayBD, waLink } from "@/lib/phone";
 import type { DayDetail } from "@/lib/schedule/queries";
 import { saveConsultDay, setDayCancelled } from "@/lib/schedule/actions";
 import { ConsultDayForm } from "./consult-day-form";
+import { ScrollIntoView } from "./scroll-into-view";
 import { LIVE_STATUSES, StatusBadge } from "./status";
 import { buttonSecondaryClass, cardClass } from "@/components/ui/styles";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -31,6 +32,7 @@ export function DayPanel({
       className={`${cardClass} scroll-mt-4 p-5`}
       aria-label={`Details for ${formatDate(date)}`}
     >
+      <ScrollIntoView targetId="day" watch={date} />
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">{formatDate(date)}</h2>

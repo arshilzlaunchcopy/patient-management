@@ -6,6 +6,7 @@ import type { VisitFormState } from "@/lib/visits/actions";
 import type { VisitInput } from "@/lib/visits/validation";
 import type { PaymentMethod } from "@/lib/types";
 import { addMonths, formatDate } from "@/lib/dates";
+import { MedicinePicker } from "./medicine-picker";
 import {
   buttonPrimaryClass,
   buttonSecondaryClass,
@@ -41,11 +42,11 @@ const MEASUREMENTS: { key: NumKey; label: string; unit: string; integer?: boolea
   { key: "creatinine", label: "Creatinine", unit: "mg/dL" },
 ];
 
+/** Free-text notes; the prescription has its own block with the medicine picker. */
 const NOTES: { key: keyof VisitInput; label: string; rows: number }[] = [
   { key: "complaints", label: "Complaints", rows: 3 },
   { key: "examination", label: "Examination", rows: 3 },
   { key: "diagnosis", label: "Diagnosis", rows: 2 },
-  { key: "prescription", label: "Prescription", rows: 6 },
   { key: "advice", label: "Advice", rows: 3 },
 ];
 
@@ -100,6 +101,12 @@ export function VisitForm({
   const [fee, setFee] = useState(String(defaultFee ?? fees[defaultMode]));
   const [feeTouched, setFeeTouched] = useState(defaultFee !== null);
   const [nextVisit, setNextVisit] = useState("");
+  const [prescription, setPrescription] = useState("");
+
+  /** Append one line from the medicine picker, keeping whatever was typed. */
+  function addPrescriptionLine(line: string) {
+    setPrescription((p) => (p.trim() ? `${p.replace(/\s+$/, "")}\n${line}` : line));
+  }
 
   const invalid = (k: keyof VisitInput) => ({
     "aria-invalid": errors[k] ? true : undefined,
@@ -219,11 +226,8 @@ export function VisitForm({
       <section className={`${cardClass} p-6`}>
         <SectionTitle>Notes</SectionTitle>
         <div className="grid gap-5 md:grid-cols-2">
-          {NOTES.map((n) => (
-            <div
-              key={n.key}
-              className={n.key === "prescription" ? "md:col-span-2" : undefined}
-            >
+          {NOTES.slice(0, 3).map((n) => (
+            <div key={n.key} className={n.key === "diagnosis" ? "md:col-span-2" : undefined}>
               <label htmlFor={n.key} className={labelClass}>
                 {n.label}
               </label>
@@ -237,6 +241,35 @@ export function VisitForm({
               <FieldError id={`${n.key}-error`} message={errors[n.key]} />
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Prescription */}
+      <section className={`${cardClass} p-6`}>
+        <SectionTitle>Prescription</SectionTitle>
+        <MedicinePicker onPick={addPrescriptionLine} />
+        <div className="mt-4">
+          <label htmlFor="prescription" className={labelClass}>
+            Prescription{" "}
+            <span className="font-normal text-neutral-500">one medicine per line; edit freely</span>
+          </label>
+          <textarea
+            id="prescription"
+            name="prescription"
+            rows={7}
+            value={prescription}
+            onChange={(e) => setPrescription(e.target.value)}
+            className={`${inputClass} font-medium leading-relaxed`}
+            {...invalid("prescription")}
+          />
+          <FieldError id="prescription-error" message={errors.prescription} />
+        </div>
+        <div className="mt-4">
+          <label htmlFor="advice" className={labelClass}>
+            Advice
+          </label>
+          <textarea id="advice" name="advice" rows={3} className={inputClass} {...invalid("advice")} />
+          <FieldError id="advice-error" message={errors.advice} />
         </div>
       </section>
 

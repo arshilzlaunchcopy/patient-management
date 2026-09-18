@@ -19,6 +19,11 @@ export const MIGRATIONS = [
   { file: "005_reset_demo_data.sql", what: "The “Reset demo data” button on Settings" },
   { file: "006_patient_latest_visits_v2.sql", what: "Patient columns on the latest-visit view, for Messages and the patient filters" },
   { file: "007_followup_link_uses_and_texts.sql", what: "Reusable follow-up links and a starter set of saved SMS texts" },
+  { file: "008_sms_delivery.sql", what: "Delivery status columns on the SMS log" },
+  { file: "009_medicines.sql", what: "Brand-name medicine index searched from the prescription" },
+  { file: "010_generics.sql", what: "Generic drugs with drug class and indications, for the medicine search" },
+  { file: "011_followup_overdue_template.sql", what: "SMS text for the rebooking link sent when a follow-up has passed" },
+  { file: "012_online_optional_wording.sql", what: "Follow-up texts that offer the online consult as optional" },
 ] as const;
 
 export type MigrationFile = (typeof MIGRATIONS)[number]["file"];
@@ -42,10 +47,10 @@ export type SchemaStatus =
   | { ok: false; missingTable: string; migration: MigrationFile };
 
 /**
- * Four one-row selects, run in parallel: `settings` exists once 001 has
- * run, `followup_requests` once 004 has, the view's `name` column once
- * 006 has, and `booking_tokens.use_count` once 007 has. Reports the first
- * thing that is missing. Any other error
+ * One-row selects, run in parallel, each proving a migration has run:
+ * `settings` (001), `followup_requests` (004), the view's `name` column
+ * (006), `booking_tokens.use_count` (007), `sms_log.delivery_status` (008)
+ * `medicines` (009) and `generics` (010). Reports the first thing that is missing. Any other error
  * (network, RLS) is not a setup problem and is ignored here; the page's own
  * query will surface it.
  *
@@ -59,6 +64,9 @@ export async function checkSchema(supabase: SupabaseClient): Promise<SchemaStatu
     { table: "followup_requests", column: "id", migration: "004_followup_requests.sql" },
     { table: "patient_latest_visits", column: "name", migration: "006_patient_latest_visits_v2.sql" },
     { table: "booking_tokens", column: "use_count", migration: "007_followup_link_uses_and_texts.sql" },
+    { table: "sms_log", column: "delivery_status", migration: "008_sms_delivery.sql" },
+    { table: "medicines", column: "id", migration: "009_medicines.sql" },
+    { table: "generics", column: "id", migration: "010_generics.sql" },
   ];
 
   const results = await Promise.all(

@@ -6,7 +6,8 @@ export type TemplateKey =
   | "booking_confirmed"
   | "payment_not_found"
   | "chamber_reminder"
-  | "day_cancelled";
+  | "day_cancelled"
+  | "followup_overdue";
 
 /**
  * Spec section 7. These are also seeded into sms_templates by migration 001;
@@ -20,7 +21,7 @@ export const DEFAULT_TEMPLATES: Record<
   followup_reminder: {
     label_en: "Follow-up reminder (video link)",
     body_bn:
-      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। অনলাইনে করতে চাইলে: {{link}}",
+      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে: {{link}}",
     variables: ["date", "link"],
   },
   booking_confirmed: {
@@ -46,6 +47,12 @@ export const DEFAULT_TEMPLATES: Record<
     body_bn:
       "প্রিয় রোগী, দুঃখিত, {{date}} তারিখে ডাক্তার বসবেন না। যোগাযোগ: {{contact}}",
     variables: ["date", "contact"],
+  },
+  followup_overdue: {
+    label_en: "Follow-up overdue (rebooking link)",
+    body_bn:
+      "প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের সময় পার হয়ে গেছে। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে দিন বেছে নিন: {{link}}",
+    variables: ["link"],
   },
 };
 

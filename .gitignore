@@ -43,3 +43,6 @@ next-env.d.ts
 
 # netlify
 .netlify
+
+# Raw medicine CSVs from Kaggle (imported into Supabase by hand; never deployed)
+supabase/data/

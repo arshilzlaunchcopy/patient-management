@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
   const { csv } = await buildPatientsCsv(supabase, {
     filter: sp.get("filter") ?? undefined,
     q: sp.get("q") ?? undefined,
+    from: sp.get("from") ?? undefined,
+    to: sp.get("to") ?? undefined,
   });
 
   return new NextResponse(csv, {

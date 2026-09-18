@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ageFromDob, formatDate } from "@/lib/dates";
 import { displayBD } from "@/lib/phone";
-import { parsePatientFilter, listPatients, type PatientFilter } from "./queries";
+import { parsePatientFilter, parsePeriod, listPatients, type PatientFilter } from "./queries";
 
 /**
  * Patient list as a spreadsheet. CSV with a UTF-8 byte-order mark, which is
@@ -89,6 +89,9 @@ const HEADERS = [
 export interface ExportOptions {
   filter?: string;
   q?: string;
+  /** Bounds for the "period" filter, as on the list page. */
+  from?: string;
+  to?: string;
 }
 
 /** Build the CSV. With a filter or search, exports exactly what the list page shows. */
@@ -104,7 +107,11 @@ export async function buildPatientsCsv(
   // Narrow to the current list view when one is active.
   let selected = patients;
   if (filter !== "all" || q) {
-    const shown = await listPatients(q, filter);
+    const shown = await listPatients(
+      q,
+      filter,
+      filter === "period" ? parsePeriod({ from: opts.from, to: opts.to }) : undefined,
+    );
     const ids = new Set(shown.map((p) => p.id));
     selected = patients.filter((p) => ids.has(String(p.id)));
   }

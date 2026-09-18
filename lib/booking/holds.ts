@@ -88,3 +88,30 @@ export async function createHold(
 
   return { appointmentId: data.id as string, paymentToken };
 }
+
+/**
+ * The patient's nearest live booking on or after `today`, if any. Used by
+ * the follow-up link so a patient who already holds or has a place is sent
+ * back to it instead of being allowed to book a second day.
+ */
+export async function findUpcomingLiveAppointment(
+  supabase: SupabaseClient,
+  patientId: string,
+  today: string,
+): Promise<Appointment | null> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("patient_id", patientId)
+    .gte("scheduled_date", today)
+    .in("status", ["hold", "pending_review", "scheduled"])
+    .order("scheduled_date", { ascending: true })
+    .limit(5);
+  if (error) throw new Error(`findUpcomingLiveAppointment: ${error.message}`);
+  const now = Date.now();
+  for (const a of (data ?? []) as Appointment[]) {
+    if (a.status === "hold" && a.hold_expires_at && new Date(a.hold_expires_at).getTime() < now) continue;
+    return a;
+  }
+  return null;
+}

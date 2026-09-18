@@ -1,7 +1,7 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import { phoneSearchPrefix } from "@/lib/phone";
-import { addDays, addMonths, todayDhaka } from "@/lib/dates";
+import { addDays, addMonths, isIsoDate, todayDhaka } from "@/lib/dates";
 import { DUE_SOON_DAYS, NOT_SEEN_MONTHS } from "@/lib/messages/segments";
 import type { Patient, Visit } from "@/lib/types";
 
@@ -21,16 +21,39 @@ export interface PatientListRow {
 export const LIST_LIMIT = 200;
 
 /**
- * Follow-up filters on the patient list. They match the audiences on the
- * Messages page so "Message these patients" carries the same set across.
+ * Follow-up filters on the patient list. The first three match the
+ * audiences on the Messages page so "Message these patients" carries the
+ * same set across. "period" is the doctor's own window on the follow-up
+ * date: e.g. everyone whose follow-up fell between two months and two weeks
+ * ago.
  */
-export const PATIENT_FILTERS = ["all", "overdue", "due_soon", "not_seen"] as const;
+export const PATIENT_FILTERS = ["all", "overdue", "due_soon", "not_seen", "period"] as const;
 export type PatientFilter = (typeof PATIENT_FILTERS)[number];
 
 export function parsePatientFilter(value: string | undefined): PatientFilter {
   return (PATIENT_FILTERS as readonly string[]).includes(value ?? "")
     ? (value as PatientFilter)
     : "all";
+}
+
+/** Inclusive bounds on next_visit_date for the "period" filter. */
+export interface PeriodRange {
+  from: string;
+  to: string;
+}
+
+/** Default window when the doctor picks "Custom period" without dates: the last three months of missed follow-ups. */
+export function defaultPeriod(): PeriodRange {
+  const today = todayDhaka();
+  return { from: addMonths(today, -3), to: addDays(today, -1) };
+}
+
+/** Read from/to out of the URL; anything invalid falls back to the default window. */
+export function parsePeriod(input: { from?: string; to?: string }): PeriodRange {
+  const d = defaultPeriod();
+  const from = input.from && isIsoDate(input.from) ? input.from : d.from;
+  const to = input.to && isIsoDate(input.to) ? input.to : d.to;
+  return from <= to ? { from, to } : { from: to, to: from };
 }
 
 /**
@@ -59,8 +82,9 @@ function searchClauses(q: string): string | null {
 export async function listPatients(
   q: string,
   filter: PatientFilter = "all",
+  period?: PeriodRange,
 ): Promise<PatientListRow[]> {
-  if (filter !== "all") return listByLatestVisit(q, filter);
+  if (filter !== "all") return listByLatestVisit(q, filter, period ?? defaultPeriod());
 
   const supabase = await createUserClient();
 
@@ -107,6 +131,7 @@ export async function listPatients(
 async function listByLatestVisit(
   q: string,
   filter: Exclude<PatientFilter, "all">,
+  period: PeriodRange,
 ): Promise<PatientListRow[]> {
   const supabase = await createUserClient();
   const today = todayDhaka();
@@ -125,6 +150,11 @@ async function listByLatestVisit(
     query = query
       .gte("next_visit_date", today)
       .lte("next_visit_date", addDays(today, DUE_SOON_DAYS))
+      .order("next_visit_date", { ascending: true });
+  } else if (filter === "period") {
+    query = query
+      .gte("next_visit_date", period.from)
+      .lte("next_visit_date", period.to)
       .order("next_visit_date", { ascending: true });
   } else {
     query = query

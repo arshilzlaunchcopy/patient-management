@@ -114,3 +114,95 @@ export async function findMergeCandidates(q: string, excludeId: string): Promise
     .slice(0, 6)
     .map((r) => ({ id: r.id, name: r.name, phone: r.phone, serial_no: r.serial_no }));
 }
+
+export interface VerifiedClaimRow {
+  id: string;
+  claimed_name: string;
+  trx_id: string | null;
+  sender_phone: string | null;
+  amount: number | null;
+  created_at: string;
+  reviewed_at: string | null;
+  appointment: {
+    id: string;
+    scheduled_date: string;
+    queue_no: number | null;
+    status: AppointmentStatus;
+    fee_amount: number | null;
+    booking_source: string;
+    patient: ClaimPatient;
+  };
+}
+
+export const VERIFIED_LIMIT = 100;
+
+/**
+ * Online payments the doctor has verified, newest first: the bKash money
+ * that has actually come in, each tied to its patient and booking.
+ */
+export async function listVerifiedClaims(): Promise<VerifiedClaimRow[]> {
+  const supabase = await createUserClient();
+  const { data, error } = await supabase
+    .from("payment_claims")
+    .select(
+      "id, claimed_name, trx_id, sender_phone, amount, created_at, reviewed_at, appointments(id, scheduled_date, queue_no, status, fee_amount, booking_source, patients(id, name, phone, status, serial_no))",
+    )
+    .eq("status", "verified")
+    .order("reviewed_at", { ascending: false, nullsFirst: false })
+    .limit(VERIFIED_LIMIT);
+  if (error) throw new Error(`listVerifiedClaims: ${error.message}`);
+
+  type Raw = Omit<VerifiedClaimRow, "appointment"> & {
+    appointments:
+      | (Omit<VerifiedClaimRow["appointment"], "patient"> & { patients: ClaimPatient | null })
+      | null;
+  };
+  return ((data ?? []) as unknown as Raw[])
+    .filter((r) => r.appointments?.patients)
+    .map(({ appointments, ...r }) => {
+      const { patients, ...appt } = appointments!;
+      return { ...r, appointment: { ...appt, patient: patients! } };
+    });
+}
+
+export interface PatientPayment {
+  id: string;
+  trx_id: string | null;
+  sender_phone: string | null;
+  amount: number | null;
+  status: "submitted" | "verified" | "rejected";
+  created_at: string;
+  reviewed_at: string | null;
+  review_note: string | null;
+  appointment: {
+    id: string;
+    scheduled_date: string;
+    queue_no: number | null;
+    status: AppointmentStatus;
+    fee_amount: number | null;
+  };
+}
+
+/** Every online payment claim for one patient's bookings, newest first. */
+export async function listPaymentsForPatient(patientId: string): Promise<PatientPayment[]> {
+  const supabase = await createUserClient();
+  const { data, error } = await supabase
+    .from("payment_claims")
+    .select(
+      "id, trx_id, sender_phone, amount, status, created_at, reviewed_at, review_note, appointments!inner(id, scheduled_date, queue_no, status, fee_amount, patient_id)",
+    )
+    .eq("appointments.patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`listPaymentsForPatient: ${error.message}`);
+
+  type Raw = Omit<PatientPayment, "appointment"> & {
+    appointments: (PatientPayment["appointment"] & { patient_id: string }) | null;
+  };
+  return ((data ?? []) as unknown as Raw[])
+    .filter((r) => r.appointments)
+    .map(({ appointments, ...r }) => {
+      const { patient_id: _pid, ...appt } = appointments!;
+      void _pid;
+      return { ...r, appointment: appt };
+    });
+}

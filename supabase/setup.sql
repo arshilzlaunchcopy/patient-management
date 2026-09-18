@@ -740,3 +740,170 @@ insert into sms_templates (key, label_en, body_bn, variables) values
 on conflict (key) do nothing;
 
 -- END 007_followup_link_uses_and_texts.sql
+
+-- =====================================================================
+-- 008_sms_delivery.sql — delivery status from the SMS gateway
+--
+-- "sent" in sms_log only means sms.net.bd accepted the message. Their
+-- report endpoint says what happened afterwards, per recipient. The Outbox
+-- and the patient page ask for it on demand and keep the answer here.
+--
+--   delivery_status   pending | delivered | failed  (our classification)
+--   delivery_detail   the gateway's own wording, e.g. "Sent", "Delivered"
+--   delivery_checked_at  when we last asked
+--
+-- Safe to re-run.
+-- =====================================================================
+
+alter table sms_log
+  add column if not exists delivery_status text
+    check (delivery_status in ('pending', 'delivered', 'failed')),
+  add column if not exists delivery_detail text,
+  add column if not exists delivery_checked_at timestamptz;
+
+-- The patient page reads one patient's messages newest first.
+create index if not exists sms_log_patient_created_idx
+  on sms_log (patient_id, created_at desc);
+
+-- END 008_sms_delivery.sql
+
+-- =====================================================================
+-- 009_medicines.sql — brand-name medicine index for the prescription
+--
+-- One row per brand as sold in Bangladesh (source: medex.com.bd via the
+-- Kaggle "Assorted Medicine Dataset of Bangladesh", ~21,700 rows). The
+-- visit form searches this by brand or generic name as the doctor types
+-- and pastes the chosen line into the prescription. The doctor can add a
+-- brand that is missing; those rows carry source = 'doctor'.
+--
+-- Loading the data: run `node supabase/scripts/prepare-medicines.mjs` to
+-- turn medicine.csv into medicines_import.csv (same column names as this
+-- table), then Supabase → Table Editor → medicines → Insert → Import data
+-- from CSV. The id and created_at columns fill themselves.
+--
+-- Safe to re-run.
+-- =====================================================================
+
+create extension if not exists pg_trgm;
+
+create table if not exists medicines (
+  id                bigserial primary key,
+  brand_id          int,                        -- medex id, null for doctor-added rows
+  brand_name        text not null,
+  type              text,                       -- allopathic | herbal
+  dosage_form       text,                       -- Tablet, Capsule, Syrup, IM/IV Injection …
+  generic           text,                       -- generic name(s), "+"-joined for combinations
+  strength          text,                       -- "500 mg", "(10 mg+30 mg)/5 ml"
+  manufacturer      text,
+  package_container text,                       -- "100 ml bottle: ৳ 40.12"
+  pack_size         text,
+  source            text not null default 'medex'
+                      check (source in ('medex', 'doctor')),
+  created_at        timestamptz not null default now()
+);
+
+create unique index if not exists medicines_brand_id_key
+  on medicines (brand_id) where brand_id is not null;
+
+-- Trigram indexes make "ilike '%metf%'" fast on both search columns.
+create index if not exists medicines_brand_trgm_idx
+  on medicines using gin (brand_name gin_trgm_ops);
+create index if not exists medicines_generic_trgm_idx
+  on medicines using gin (generic gin_trgm_ops);
+
+alter table medicines enable row level security;
+
+drop policy if exists authenticated_all on medicines;
+create policy authenticated_all on medicines
+  for all to authenticated using (true) with check (true);
+
+-- END 009_medicines.sql
+
+-- =====================================================================
+-- 010_generics.sql — generic drugs with their class and indications
+--
+-- One row per generic (source: medex.com.bd via the Kaggle dataset, ~1,700
+-- rows). Joined to `medicines` by name (medicines.generic = generic_name),
+-- so a brand's result in the prescription picker can show its drug class,
+-- and the doctor can search by what a drug is for ("hypertension") and get
+-- the brands. Combination products ("A + B") have no matching generic row
+-- and simply show without a class.
+--
+-- Loading the data: `node supabase/scripts/prepare-generics.mjs` writes
+-- generics_import.csv from generic.csv; then Supabase → Table Editor →
+-- generics → Insert → Import data from CSV.
+--
+-- Safe to re-run.
+-- =====================================================================
+
+create table if not exists generics (
+  id           bigserial primary key,
+  generic_id   int,                          -- medex id
+  generic_name text not null,
+  drug_class   text,                         -- "Biguanides", "Sulfonylureas" …
+  indication   text,                         -- "Type 2 DM", "Hypertension" …
+  created_at   timestamptz not null default now()
+);
+
+create unique index if not exists generics_generic_id_key
+  on generics (generic_id) where generic_id is not null;
+create index if not exists generics_name_idx on generics (generic_name);
+create index if not exists generics_name_trgm_idx
+  on generics using gin (generic_name gin_trgm_ops);
+create index if not exists generics_indication_trgm_idx
+  on generics using gin (indication gin_trgm_ops);
+create index if not exists generics_class_trgm_idx
+  on generics using gin (drug_class gin_trgm_ops);
+
+alter table generics enable row level security;
+
+drop policy if exists authenticated_all on generics;
+create policy authenticated_all on generics
+  for all to authenticated using (true) with check (true);
+
+-- END 010_generics.sql
+
+-- =====================================================================
+-- 011_followup_overdue_template.sql — SMS for a follow-up that has passed
+--
+-- A follow-up link used to be worthless once the date had gone by. Now an
+-- overdue patient gets a link that opens straight onto the open dates so
+-- they can pick a new day and pay. This is the text that carries it;
+-- editable on Settings like the other automatic texts. Safe to re-run.
+-- =====================================================================
+
+insert into sms_templates (key, label_en, body_bn, variables) values
+  ('followup_overdue', 'Follow-up overdue (rebooking link)',
+   'প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের তারিখ পার হয়ে গেছে। নতুন দিন বেছে নিতে: {{link}}',
+   '{link}')
+on conflict (key) do nothing;
+
+-- END 011_followup_overdue_template.sql
+
+-- =====================================================================
+-- 012_online_optional_wording.sql — online follow-up is an option, not
+-- the expectation
+--
+-- Most patients simply come to the chamber. The texts that carry a
+-- follow-up link now say so first, and offer the online (video) consult
+-- as "if you would like". Only rows still holding the original wording
+-- are touched, so anything the doctor has already edited on Settings
+-- stays as written. Safe to re-run.
+-- =====================================================================
+
+update sms_templates
+set body_bn = 'প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে: {{link}}'
+where key = 'followup_reminder'
+  and body_bn = 'প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। অনলাইনে করতে চাইলে: {{link}}';
+
+update sms_templates
+set body_bn = 'প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের সময় পার হয়ে গেছে। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে দিন বেছে নিন: {{link}}'
+where key = 'followup_overdue'
+  and body_bn = 'প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের তারিখ পার হয়ে গেছে। নতুন দিন বেছে নিতে: {{link}}';
+
+update sms_templates
+set body_bn = 'প্রিয় রোগী, আপনার ফলোআপের সময় পার হয়ে গেছে। সুবিধামতো চেম্বারে আসুন। অনলাইনে (ভিডিও) করতে চাইলে জানাবেন, লিংক পাঠানো হবে।'
+where key = 'custom_seed_overdue'
+  and body_bn = 'প্রিয় রোগী, আপনার ফলোআপের সময় পার হয়ে গেছে। দ্রুত চেম্বারে আসুন বা অনলাইনে সিরিয়াল নিন।';
+
+-- END 012_online_optional_wording.sql

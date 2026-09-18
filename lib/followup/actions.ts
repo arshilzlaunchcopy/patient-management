@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { sendFollowupReminder } from "./send";
-import { todayDhaka } from "@/lib/dates";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Dashboard demo button: queue the follow-up reminder for a patient whose
- * latest visit has an upcoming next_visit_date. Stands in for the cron job.
+ * Dashboard button: queue the follow-up link for a patient's latest
+ * next_visit_date. An upcoming date gets the reminder; a date that has
+ * passed gets the rebooking text, whose link opens on the open dates.
  */
 export async function sendFollowupLinkAction(formData: FormData) {
   const patientId = String(formData.get("patient_id") ?? "");
@@ -36,7 +36,7 @@ export async function sendFollowupLinkAction(formData: FormData) {
     .maybeSingle();
 
   const date = latest?.next_visit_date as string | null | undefined;
-  if (!date || date < todayDhaka()) {
+  if (!date) {
     redirect(`/patients/${patientId}?followup=none`);
   }
 

@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendFollowupReminder } from "@/lib/followup/send";
 import { normalizeBD } from "@/lib/phone";
-import { todayDhaka } from "@/lib/dates";
 
 const MAX_PER_HOUR = 3;
 
@@ -47,8 +46,9 @@ export async function POST(request: NextRequest) {
       .select("next_visit_date")
       .eq("patient_id", patient.id)
       .maybeSingle();
+    // An overdue date still gets a link: it opens on the new-day chooser.
     const date = latest?.next_visit_date as string | null | undefined;
-    if (!date || date < todayDhaka()) return done;
+    if (!date) return done;
 
     await sendFollowupReminder(supabase, { patientId: patient.id as string, phone, date });
   } catch (err) {

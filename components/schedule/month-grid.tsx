@@ -120,14 +120,26 @@ export function MonthGrid({
                   {Number(date.slice(8, 10))}
                 </span>
                 {day && !cancelled && day.is_open_for_new ? (
-                  <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-accent-strong md:text-[11px]">
-                    Open
-                  </span>
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent md:hidden"
+                    />
+                    <span className="hidden rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold uppercase leading-none text-accent-strong md:inline">
+                      Open
+                    </span>
+                  </>
                 ) : null}
                 {cancelled ? (
-                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-red-700 md:text-[11px]">
-                    Off
-                  </span>
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500 md:hidden"
+                    />
+                    <span className="hidden rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase leading-none text-red-700 md:inline">
+                      Off
+                    </span>
+                  </>
                 ) : null}
               </div>
 

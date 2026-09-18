@@ -3,18 +3,13 @@ import Link from "next/link";
 import { formatDateTime } from "@/lib/dates";
 import { displayBD } from "@/lib/phone";
 import { countQueued, listSmsLog, OUTBOX_LIMIT } from "@/lib/sms/queries";
-import { smsGatewayConfigured } from "@/lib/sms/provider";
+import { getGatewayBalance, smsGatewayConfigured } from "@/lib/sms/provider";
 import { SendQueued } from "@/components/outbox/send-queued";
+import { SmsStatusBadge } from "@/components/outbox/sms-status";
 import { Linkified } from "@/components/outbox/linkified";
 import { cardClass } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Outbox" };
-
-const STATUS: Record<string, { label: string; className: string }> = {
-  queued: { label: "Queued", className: "bg-amber-100 text-amber-800" },
-  sent: { label: "Sent", className: "bg-accent-soft text-accent-strong" },
-  failed: { label: "Failed", className: "bg-red-50 text-red-700" },
-};
 
 export default async function OutboxPage({
   searchParams,
@@ -22,8 +17,12 @@ export default async function OutboxPage({
   searchParams: Promise<{ campaign?: string }>;
 }) {
   const { campaign } = await searchParams;
-  const [rows, queued] = await Promise.all([listSmsLog(campaign), countQueued()]);
   const configured = smsGatewayConfigured();
+  const [rows, queued, balance] = await Promise.all([
+    listSmsLog(campaign),
+    countQueued(),
+    configured ? getGatewayBalance() : Promise.resolve(null),
+  ]);
 
   return (
     <>
@@ -32,10 +31,10 @@ export default async function OutboxPage({
         <p className="mt-1 text-base text-neutral-600">
           Every SMS the system has generated, newest first.
           {configured
-            ? " Messages go out through sms.net.bd as they are created."
+            ? " Messages go out through sms.net.bd as they are created; “Check delivery” asks the gateway whether the phone received them."
             : " Until an SMS gateway key is added, messages stay queued here; links inside them can still be opened to walk through the patient flow."}
         </p>
-        <SendQueued configured={configured} queued={queued} />
+        <SendQueued configured={configured} queued={queued} balance={balance} />
         {campaign ? (
           <p className="mt-2 text-sm text-neutral-600">
             Showing one bulk send only.{" "}
@@ -56,49 +55,47 @@ export default async function OutboxPage({
       ) : (
         <>
           <ol className={`${cardClass} divide-y divide-neutral-100`}>
-            {rows.map((r) => {
-              const s = STATUS[r.status] ?? STATUS.queued;
-              return (
-                <li key={r.id} className="px-5 py-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <p className="text-base text-neutral-900">
-                      {r.patient ? (
-                        <Link
-                          href={`/patients/${r.patient.id}`}
-                          className="font-medium text-accent-strong hover:underline"
-                        >
-                          {r.patient.name}
-                        </Link>
-                      ) : (
-                        <span className="font-medium">Unknown patient</span>
-                      )}
-                      <span className="ml-2 tabular-nums text-neutral-600">
-                        {displayBD(r.phone)}
-                      </span>
-                    </p>
-                    <p className="text-sm tabular-nums text-neutral-500">
-                      {formatDateTime(r.created_at)}
-                    </p>
-                  </div>
-                  <p className="mt-2 text-lg leading-relaxed text-neutral-900">
-                    <Linkified text={r.body} lang="bn" />
+            {rows.map((r) => (
+              <li key={r.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <p className="text-base text-neutral-900">
+                    {r.patient ? (
+                      <Link
+                        href={`/patients/${r.patient.id}#messages`}
+                        className="font-medium text-accent-strong hover:underline"
+                      >
+                        {r.patient.name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">Unknown patient</span>
+                    )}
+                    <span className="ml-2 tabular-nums text-neutral-600">{displayBD(r.phone)}</span>
                   </p>
-                  <p className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-600">
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}
-                    >
-                      {s.label}
-                    </span>
-                    <span className="tabular-nums">
-                      {r.segments} {r.segments === 1 ? "segment" : "segments"}
-                    </span>
-                    {r.error_message ? (
-                      <span className="text-red-700">{r.error_message}</span>
-                    ) : null}
+                  <p className="text-sm tabular-nums text-neutral-500">
+                    {formatDateTime(r.created_at)}
                   </p>
-                </li>
-              );
-            })}
+                </div>
+                <p className="mt-2 text-lg leading-relaxed text-neutral-900">
+                  <Linkified text={r.body} lang="bn" />
+                </p>
+                <p className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-600">
+                  <SmsStatusBadge
+                    status={r.status}
+                    deliveryStatus={r.delivery_status}
+                    deliveryDetail={r.delivery_detail}
+                  />
+                  <span className="tabular-nums">
+                    {r.segments} {r.segments === 1 ? "segment" : "segments"}
+                  </span>
+                  {r.error_message ? <span className="text-red-700">{r.error_message}</span> : null}
+                  {r.delivery_checked_at ? (
+                    <span className="text-neutral-400">
+                      checked {formatDateTime(r.delivery_checked_at)}
+                    </span>
+                  ) : null}
+                </p>
+              </li>
+            ))}
           </ol>
           {rows.length === OUTBOX_LIMIT ? (
             <p className="mt-3 text-sm text-neutral-500">
