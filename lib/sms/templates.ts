@@ -1,5 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
+import { bn } from "@/lib/i18n/bn";
 
 export type TemplateKey =
   | "followup_reminder"
@@ -13,6 +14,7 @@ export type TemplateKey =
  * Spec section 7. These are also seeded into sms_templates by migration 001;
  * the copies here are the fallback if a row is missing or inactive.
  * Nothing addresses the patient by name: always প্রিয় রোগী.
+ * Every body ends with the doctor’s signature (migration 013 adds it to the rows).
  */
 export const DEFAULT_TEMPLATES: Record<
   TemplateKey,
@@ -21,37 +23,37 @@ export const DEFAULT_TEMPLATES: Record<
   followup_reminder: {
     label_en: "Follow-up reminder (video link)",
     body_bn:
-      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে: {{link}}",
+      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপ। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে: {{link}}" + bn.smsSignature,
     variables: ["date", "link"],
   },
   booking_confirmed: {
     label_en: "Booking confirmed",
     body_bn:
-      "প্রিয় রোগী, পেমেন্ট নিশ্চিত হয়েছে। সিরিয়াল নং {{queue}}। {{date}} তারিখ {{start}}-{{end}} এর মধ্যে WhatsApp এ কল করা হবে।",
+      "প্রিয় রোগী, পেমেন্ট নিশ্চিত হয়েছে। সিরিয়াল নং {{queue}}। {{date}} তারিখ {{start}}-{{end}} এর মধ্যে WhatsApp এ কল করা হবে।" + bn.smsSignature,
     variables: ["queue", "date", "start", "end"],
   },
   payment_not_found: {
     label_en: "Payment not found",
     body_bn:
-      "প্রিয় রোগী, আপনার পেমেন্ট খুঁজে পাওয়া যায়নি। আবার তথ্য দিন: {{link}}",
+      "প্রিয় রোগী, আপনার পেমেন্ট খুঁজে পাওয়া যায়নি। আবার তথ্য দিন: {{link}}" + bn.smsSignature,
     variables: ["link"],
   },
   chamber_reminder: {
     label_en: "Chamber appointment reminder",
     body_bn:
-      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর চেম্বারে আপনার অ্যাপয়েন্টমেন্ট রয়েছে।",
+      "প্রিয় রোগী, {{date}} তারিখে ডাঃ খালেদ নূর জিহাদ এর চেম্বারে আপনার অ্যাপয়েন্টমেন্ট রয়েছে।" + bn.smsSignature,
     variables: ["date"],
   },
   day_cancelled: {
     label_en: "Consultation day cancelled",
     body_bn:
-      "প্রিয় রোগী, দুঃখিত, {{date}} তারিখে ডাক্তার বসবেন না। যোগাযোগ: {{contact}}",
+      "প্রিয় রোগী, দুঃখিত, {{date}} তারিখে ডাক্তার বসবেন না। যোগাযোগ: {{contact}}" + bn.smsSignature,
     variables: ["date", "contact"],
   },
   followup_overdue: {
     label_en: "Follow-up overdue (rebooking link)",
     body_bn:
-      "প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের সময় পার হয়ে গেছে। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে দিন বেছে নিন: {{link}}",
+      "প্রিয় রোগী, ডাঃ খালেদ নূর জিহাদ এর কাছে আপনার ফলোআপের সময় পার হয়ে গেছে। চেম্বারে আসুন, অথবা অনলাইনে (ভিডিও) করতে চাইলে দিন বেছে নিন: {{link}}" + bn.smsSignature,
     variables: ["link"],
   },
 };

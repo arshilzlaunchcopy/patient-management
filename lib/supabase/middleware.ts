@@ -8,7 +8,7 @@ import { retryingFetch } from "./fetch";
  * /api holds the public booking route handlers; dashboard-only
  * route handlers must check auth themselves.
  */
-const PUBLIC_PREFIXES = ["/login", "/b", "/f", "/api"];
+const PUBLIC_PREFIXES = ["/login", "/b", "/f", "/booking", "/follow-up", "/api"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some(

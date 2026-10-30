@@ -4,14 +4,14 @@ import { cardClass } from "@/components/ui/styles";
 
 const LINKS = [
   {
-    path: "/b",
+    path: "/booking",
     label: "New patient booking",
     help: "Share anywhere. Patients pick an open date, pay by bKash and get a serial.",
   },
   {
-    path: "/f",
-    label: "Lost follow-up link",
-    help: "For returning patients who deleted their reminder SMS. Asks for their number only.",
+    path: "/follow-up",
+    label: "Follow-up online booking",
+    help: "For returning patients. Asks for their number only and texts them their own follow-up booking link.",
   },
 ] as const;
 

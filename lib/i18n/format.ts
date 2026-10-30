@@ -16,6 +16,13 @@ export function formatDateBn(iso: string): string {
   return `${toBengaliDigits(Number(m[3]))} ${bn.monthsShort[Number(m[2]) - 1]}`;
 }
 
+/** 'YYYY-MM-DD' → { day: '১৮', month: 'জানু' }, for layouts that stack the two. */
+export function datePartsBn(iso: string): { day: string; month: string } {
+  const m = DATE_RE.exec(iso);
+  if (!m) return { day: toBengaliDigits(iso), month: "" };
+  return { day: toBengaliDigits(Number(m[3])), month: bn.monthsShort[Number(m[2]) - 1] };
+}
+
 /** 'YYYY-MM-DD' → 'শনিবার' */
 export function weekdayBn(iso: string): string {
   const m = DATE_RE.exec(iso);

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getSettings, SETTING_KEYS, type SettingKey } from "@/lib/settings";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SettingsForm } from "@/components/settings/settings-form";
-import { ResetDemo } from "@/components/settings/reset-demo";
 import { TemplatesForm } from "@/components/settings/templates-form";
 import { isCustomTemplate, listTemplates } from "@/lib/messages/queries";
 import { ShareLinks } from "@/components/dashboard/share-links";
@@ -18,8 +17,8 @@ const DEFAULTS: Record<SettingKey, string> = {
   whatsapp_number: "",
   video_fee: "500",
   in_person_fee: "500",
-  default_call_start: "20:00",
-  default_call_end: "22:00",
+  default_call_start: "19:00",
+  default_call_end: "21:00",
   default_capacity: "15",
   hold_minutes: "30",
   reminder_days_before: "2",
@@ -52,7 +51,6 @@ export default async function SettingsPage() {
         <ShareLinks />
         <SettingsForm values={values} />
         <TemplatesForm templates={templates} />
-        <ResetDemo />
       </div>
     </>
   );

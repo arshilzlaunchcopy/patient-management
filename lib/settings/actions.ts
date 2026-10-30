@@ -170,23 +170,3 @@ export async function saveSmsTemplates(
   revalidatePath("/settings");
   return { savedAt: Date.now() };
 }
-
-export interface ResetState {
-  message?: string;
-  error?: string;
-}
-
-/** Re-runs the demo seed inside the database (migration 005). */
-export async function resetDemoData(): Promise<ResetState> {
-  const supabase = await createUserClient();
-  const { error } = await supabase.rpc("reset_demo_data");
-  if (error) {
-    return {
-      error: error.message.includes("reset_demo_data")
-        ? "The reset function is missing. Apply migration 005 in Supabase first."
-        : `Reset failed: ${error.message}`,
-    };
-  }
-  revalidatePath("/", "layout");
-  return { message: "Demo data reset. Dates are relative to today." };
-}

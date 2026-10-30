@@ -16,7 +16,7 @@ export const MIGRATIONS = [
   { file: "002_patient_serial.sql", what: "Serial number generator for accepted patients" },
   { file: "003_patient_latest_visits.sql", what: "Latest-visit view used by the Today page" },
   { file: "004_followup_requests.sql", what: "Rate limiting for the lost-link form" },
-  { file: "005_reset_demo_data.sql", what: "The “Reset demo data” button on Settings" },
+  { file: "005_reset_demo_data.sql", what: "Demo data function (removed again by 013)" },
   { file: "006_patient_latest_visits_v2.sql", what: "Patient columns on the latest-visit view, for Messages and the patient filters" },
   { file: "007_followup_link_uses_and_texts.sql", what: "Reusable follow-up links and a starter set of saved SMS texts" },
   { file: "008_sms_delivery.sql", what: "Delivery status columns on the SMS log" },
@@ -24,6 +24,7 @@ export const MIGRATIONS = [
   { file: "010_generics.sql", what: "Generic drugs with drug class and indications, for the medicine search" },
   { file: "011_followup_overdue_template.sql", what: "SMS text for the rebooking link sent when a follow-up has passed" },
   { file: "012_online_optional_wording.sql", what: "Follow-up texts that offer the online consult as optional" },
+  { file: "013_go_live.sql", what: "bKash number, 7–9 PM online hours, signature on every SMS text" },
 ] as const;
 
 export type MigrationFile = (typeof MIGRATIONS)[number]["file"];

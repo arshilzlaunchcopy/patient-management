@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createUserClient } from "@/lib/supabase/server";
 import { getSettings, settingInt, settingTime } from "@/lib/settings";
 import { addDays, isIsoDate, todayDhaka, weekdayOf } from "@/lib/dates";
+import { ALL_BUT_FRIDAY } from "./constants";
 
 export interface ConsultDayFormState {
   errors?: Partial<
@@ -92,7 +93,8 @@ export interface BulkOpenState {
 
 /**
  * Open the next N occurrences of a weekday (starting today) with the
- * default call window and capacity. Existing rows are left untouched.
+ * default call window and capacity. With ALL_BUT_FRIDAY, opens every day
+ * except Friday for the next N weeks. Existing rows are left untouched.
  */
 export async function bulkOpenDays(
   _prev: BulkOpenState,
@@ -102,7 +104,7 @@ export async function bulkOpenDays(
   const count = Number(formData.get("count"));
   const openToNew = formData.get("open_to_new") === "on";
 
-  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > ALL_BUT_FRIDAY) {
     return { error: "Choose a weekday." };
   }
   if (!Number.isInteger(count) || count < 1 || count > 12) {
@@ -110,8 +112,14 @@ export async function bulkOpenDays(
   }
 
   const today = todayDhaka();
-  const first = addDays(today, (weekday - weekdayOf(today) + 7) % 7);
-  const dates = Array.from({ length: count }, (_, i) => addDays(first, i * 7));
+  const dates =
+    weekday === ALL_BUT_FRIDAY
+      ? Array.from({ length: count * 7 }, (_, i) => addDays(today, i)).filter(
+          (d) => weekdayOf(d) !== 5,
+        )
+      : Array.from({ length: count }, (_, i) =>
+          addDays(today, (weekday - weekdayOf(today) + 7) % 7 + i * 7),
+        );
 
   const supabase = await createUserClient();
   const s = await getSettings([
@@ -133,8 +141,8 @@ export async function bulkOpenDays(
     .map((date) => ({
       date,
       mode: "video",
-      call_start: settingTime(s.default_call_start, "20:00"),
-      call_end: settingTime(s.default_call_end, "22:00"),
+      call_start: settingTime(s.default_call_start, "19:00"),
+      call_end: settingTime(s.default_call_end, "21:00"),
       capacity: settingInt(s.default_capacity, 15),
       is_open_for_new: openToNew,
     }));

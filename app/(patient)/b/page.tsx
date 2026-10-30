@@ -4,7 +4,7 @@ import { getOpenDates } from "@/lib/availability";
 import { getSettings } from "@/lib/settings";
 import { bn } from "@/lib/i18n/bn";
 import {
-  formatDateBn,
+  datePartsBn,
   formatWindowBn,
   toBengaliDigits,
   weekdayBn,
@@ -41,6 +41,7 @@ export default async function PickDatePage() {
           {dates.map((d) => {
             const w = formatWindowBn(d.call_start, d.call_end);
             const few = d.remaining !== null && d.remaining <= 5;
+            const day = datePartsBn(d.date);
             return (
               <li key={d.date}>
                 <Link
@@ -48,8 +49,9 @@ export default async function PickDatePage() {
                   className="flex min-h-20 items-center gap-4 rounded-xl border-2 border-neutral-300 bg-white px-4 py-3 active:border-accent active:bg-accent-soft"
                 >
                   <span className="flex w-20 shrink-0 flex-col items-center rounded-lg bg-accent-soft py-2 text-accent-strong">
-                    <span className="text-2xl font-bold leading-none">{formatDateBn(d.date)}</span>
-                    <span className="mt-1 text-sm">{weekdayBn(d.date)}</span>
+                    <span className="text-2xl font-bold leading-none">{day.day}</span>
+                    <span className="mt-1 text-base font-medium leading-tight">{day.month}</span>
+                    <span className="text-sm leading-tight">{weekdayBn(d.date)}</span>
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-lg font-medium leading-snug text-neutral-900">

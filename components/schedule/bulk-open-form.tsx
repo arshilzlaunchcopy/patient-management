@@ -2,16 +2,18 @@
 
 import { startTransition, useActionState } from "react";
 import { bulkOpenDays, type BulkOpenState } from "@/lib/schedule/actions";
+import { ALL_BUT_FRIDAY } from "@/lib/schedule/constants";
 import { buttonSecondaryClass, inputClass, labelClass } from "@/components/ui/styles";
 
 const WEEKDAYS = [
-  [6, "Saturday"],
-  [0, "Sunday"],
-  [1, "Monday"],
-  [2, "Tuesday"],
-  [3, "Wednesday"],
-  [4, "Thursday"],
-  [5, "Friday"],
+  [ALL_BUT_FRIDAY, "Weeks, every day except Friday"],
+  [6, "Saturdays"],
+  [0, "Sundays"],
+  [1, "Mondays"],
+  [2, "Tuesdays"],
+  [3, "Wednesdays"],
+  [4, "Thursdays"],
+  [5, "Fridays"],
 ] as const;
 
 export function BulkOpenForm() {
@@ -49,18 +51,18 @@ export function BulkOpenForm() {
         <select
           id="bulk-weekday"
           name="weekday"
-          defaultValue="6"
-          className={`${inputClass} w-40`}
+          defaultValue={ALL_BUT_FRIDAY}
+          className={`${inputClass} w-72`}
         >
           {WEEKDAYS.map(([v, label]) => (
             <option key={v} value={v}>
-              {label}s
+              {label}
             </option>
           ))}
         </select>
       </div>
       <label className="flex items-center gap-2 pb-2.5 text-base text-neutral-800">
-        <input type="checkbox" name="open_to_new" className="h-5 w-5 accent-accent" />
+        <input type="checkbox" name="open_to_new" defaultChecked className="h-5 w-5 accent-accent" />
         Open to new patients
       </label>
       <button type="submit" disabled={pending} className={buttonSecondaryClass}>

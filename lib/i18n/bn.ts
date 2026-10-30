@@ -120,9 +120,12 @@ export const bn = {
     "পাঠানো হলে মেসেজের TrxID টি রেখে দিন",
   ],
 
+  // Signature line that ends every SMS
+  smsSignature: "\n- ডাঃ খালেদ নূর জিহাদ",
+
   // Cancellation SMS the doctor sends from the schedule
   smsDayCancelled: (date: string) =>
-    `প্রিয় রোগী, দুঃখিত, ${date} তারিখে ডাক্তার বসবেন না। নতুন তারিখ জানানো হবে।`,
+    `প্রিয় রোগী, দুঃখিত, ${date} তারিখে ডাক্তার বসবেন না। নতুন তারিখ জানানো হবে।\n- ডাঃ খালেদ নূর জিহাদ`,
 
   loading: "লোড হচ্ছে…",
   errorHeading: "দুঃখিত, কিছু একটা ভুল হয়েছে।",

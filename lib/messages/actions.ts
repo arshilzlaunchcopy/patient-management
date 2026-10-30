@@ -7,6 +7,7 @@ import { PICKER_LIMIT } from "./constants";
 import { sendBulkSms } from "@/lib/sms/provider";
 import { analyzeSms, MAX_CAMPAIGN_SEGMENTS } from "@/lib/sms/segments";
 import { describeSegment, parseSegment, resolveRecipients } from "./segments";
+import { bn } from "@/lib/i18n/bn";
 
 export interface SendState {
   error?: string;
@@ -37,7 +38,9 @@ export async function saveTemplateAction(input: {
   body: string;
 }): Promise<TemplateActionResult> {
   const name = String(input.name ?? "").trim();
-  const body = String(input.body ?? "").trim();
+  const typed = String(input.body ?? "").trim();
+  // Every saved text ends with the doctor’s signature, like the automatic ones.
+  const body = !typed || typed.endsWith(bn.smsSignature) ? typed : typed + bn.smsSignature;
   if (!name) return { error: "Give the text a short name." };
   if (name.length > 60) return { error: "Keep the name under 60 characters." };
   if (!body) return { error: "There is nothing to save yet." };

@@ -54,8 +54,8 @@ export default async function SchedulePage({
   ]);
 
   const defaults = {
-    call_start: settingTime(settings.default_call_start, "20:00"),
-    call_end: settingTime(settings.default_call_end, "22:00"),
+    call_start: settingTime(settings.default_call_start, "19:00"),
+    call_end: settingTime(settings.default_call_end, "21:00"),
     capacity: settingInt(settings.default_capacity, 15),
   };
 

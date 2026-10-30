@@ -21,8 +21,8 @@ export async function ensureConsultDay(
     {
       date,
       mode: "video",
-      call_start: settingTime(s.default_call_start, "20:00"),
-      call_end: settingTime(s.default_call_end, "22:00"),
+      call_start: settingTime(s.default_call_start, "19:00"),
+      call_end: settingTime(s.default_call_end, "21:00"),
       capacity: settingInt(s.default_capacity, 15),
       is_open_for_new: false,
     },

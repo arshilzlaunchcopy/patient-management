@@ -105,7 +105,7 @@ export async function verifyClaim(formData: FormData) {
     .eq("date", appt.scheduled_date)
     .eq("mode", "video")
     .maybeSingle();
-  const w = formatWindowBn(day?.call_start ?? "20:00", day?.call_end ?? "22:00");
+  const w = formatWindowBn(day?.call_start ?? "19:00", day?.call_end ?? "21:00");
 
   const body = await renderTemplate("booking_confirmed", {
     queue: appt.queue_no !== null ? toBengaliDigits(appt.queue_no) : "—",
